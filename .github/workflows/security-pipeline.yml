@@ -45,6 +45,9 @@ jobs:
   secret-scan:
     name: Secrets
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -54,10 +57,41 @@ jobs:
           # between a working secret scanner and a decorative one.
           fetch-depth: 0
 
-      - name: gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Deliberately NOT gitleaks-action. On a push it scans only the pushed
+      # commit RANGE, which on a repository's first push is
+      # `<first-commit>^..HEAD` -- and the first commit has no parent. git
+      # errors, the scan covers ZERO bytes, and the action still prints
+      # "no leaks found".
+      #
+      # A scanner that reports a pass while scanning nothing is worse than no
+      # scanner, because it manufactures confidence. So: pin the version, scan
+      # the whole repository every time, and let it be slightly slower.
+      - name: Install gitleaks
+        run: |
+          VERSION=8.30.1
+          curl -sSfL \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Scan the entire repository history
+        run: |
+          gitleaks detect \
+            --source . \
+            --config .gitleaks.toml \
+            --redact \
+            --verbose \
+            --report-format sarif \
+            --report-path gitleaks.sarif \
+            --exit-code 1
+
+      - name: Upload gitleaks SARIF
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gitleaks.sarif
+          category: gitleaks
 
   # ===========================================================================
   # GATE 2 -- infrastructure as code, per environment.
@@ -196,7 +230,13 @@ jobs:
     name: Apply (dev)
     runs-on: ubuntu-latest
     needs: [secret-scan, iac-scan]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Only runs when an AWS role has actually been configured on the
+    # environment. Without it the job is skipped rather than failing, so the
+    # pipeline is demonstrable without a cloud account attached.
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      vars.AWS_ROLE_ARN != ''
     permissions:
       contents: read
       id-token: write
