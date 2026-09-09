@@ -651,6 +651,58 @@ advert than one that succeeds quietly.
 
 ---
 
+## STEP 14e — There is something actually running (2 min)
+
+**Do this right after the live prod deploy. It's the payoff.**
+
+### [RUN]
+
+```bash
+for h in 10.10.10.20 10.20.10.20 10.30.10.20 10.30.10.21; do
+  echo -n "$h  "; curl -s http://$h:8080/health; echo -n "  "; curl -s http://$h:8080/version; echo
+done
+```
+
+### [EXPECT]
+
+```
+10.10.10.20  {"status": "ok"}  {"version": "1.0.0"}
+10.20.10.20  {"status": "ok"}  {"version": "1.0.0"}
+10.30.10.20  {"status": "ok"}  {"version": "1.0.0"}
+10.30.10.21  {"status": "ok"}  {"version": "1.0.0"}
+```
+
+### [SAY]
+
+> "So these aren't empty boxes. Terraform provisioned the containers; **Ansible** installed the
+> service into them. I keep those separate deliberately — rebuilding a container shouldn't mean
+> redeploying the application, and redeploying the application shouldn't touch infrastructure.
+>
+> And I want to point at one thing in that deploy, because it's the same idea as everything else
+> I've shown you.
+>
+> The Ansible healthcheck doesn't just check that the service is **up**. It asserts the **version**.
+> So a deploy that silently left the old code running fails, instead of reporting success.
+>
+> Which is the whole theme, really: a control that passes while doing nothing is worse than no
+> control, because it manufactures confidence."
+
+### If they ask about rollback
+
+> "Release directories with a symlink. `current` points at `releases/1.0.0`. A rollback is a symlink
+> flip, not a redeploy — seconds, and the previous release is still on disk."
+
+### Be precise about what this is
+
+**LXC containers. Python `http.server`. Ansible. systemd.**
+Not Docker. Not Kubernetes. Not FastAPI. If asked why not:
+
+> "For this, containers-in-containers would have added a registry, image builds and an orchestrator
+> to demonstrate a security pipeline that doesn't need any of them. If you're running Kubernetes I'd
+> put the same gates in front of your manifests — it's the same pattern with a different apply step."
+
+---
+
 ## STEP 15 — No stored credentials (2 min)
 
 ### [SAY]

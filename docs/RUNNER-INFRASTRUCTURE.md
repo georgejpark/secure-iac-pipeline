@@ -121,6 +121,37 @@ TOKEN=$(gh api -X POST repos/OWNER/REPO/actions/runners/registration-token --jq 
 
 ---
 
+## The workload containers
+
+Separate from the runners. Provisioned by Terraform, configured by Ansible.
+
+| | dev | stage | prod |
+|---|---|---|---|
+| Container | `app-dev-1` (301) | `app-stage-1` (311) | `app-prod-1` (321), `app-prod-2` (322) |
+| Address | `10.10.10.20` | `10.20.10.20` | `10.30.10.20`, `10.30.10.21` |
+| Segment layout | `.1` gateway · `.10` runner · `.20+` workloads | | |
+
+### Three networking bugs worth recording
+
+| Problem | Cause | Lesson |
+|---|---|---|
+| Workload on the gateway address | Host octet derived from VMID; `301 % 100 = 1` | Derive addresses explicitly, never from an unrelated identifier |
+| No DNS at all | The module set no resolvers | A container with no resolver fails everything with "Temporary failure resolving" |
+| Containers unreachable after a NIC edit | `pct set --net0` without `hwaddr=` regenerates the MAC, leaving stale ARP on the host | Always pass `hwaddr=`, and flush ARP after a NIC change |
+
+The last one is a repeat of a mistake already recorded in this file. Writing a lesson down does not
+prevent it; checking does.
+
+### Why the per-container firewall is off
+
+The Proxmox per-container firewall inserts a bridge in front of the NIC and drops return traffic for
+outbound connections regardless of `policy_in`, which broke DNS and apt. Environment isolation never
+depended on it — the **host forward policy** enforces that, and it is verified in both directions.
+The flag is off, and the reasoning is recorded in the module and the policy table rather than the
+policy being quietly deleted.
+
+---
+
 ## Verification
 
 Both halves matter. Isolation that also blocks GitHub is not isolation, it is a broken runner.

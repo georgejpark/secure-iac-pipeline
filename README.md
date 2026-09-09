@@ -117,6 +117,42 @@ each  -> api.github.com     HTTP 200
 Runners connect **outbound only** — no inbound port is open. Full build in
 [`docs/RUNNER-INFRASTRUCTURE.md`](docs/RUNNER-INFRASTRUCTURE.md).
 
+
+## What is actually running
+
+**Say what this is, precisely.** Terraform provisions **LXC containers** on a Proxmox host. Ansible
+installs a small **Python HTTP service** into them under systemd. There is **no Docker, no Kubernetes
+and no FastAPI** in this stack.
+
+```
+app-dev-1    10.10.10.20:8080   {"status":"ok"}  {"version":"1.0.0"}
+app-stage-1  10.20.10.20:8080   {"status":"ok"}  {"version":"1.0.0"}
+app-prod-1   10.30.10.20:8080   {"status":"ok"}  {"version":"1.0.0"}
+app-prod-2   10.30.10.21:8080   {"status":"ok"}  {"version":"1.0.0"}
+```
+
+Production runs two containers because production specifies two.
+
+### Terraform provisions the machine; Ansible installs the application
+
+Keeping those separate is deliberate — rebuilding a container should not mean redeploying the app,
+and redeploying the app should not mean touching infrastructure.
+
+The Ansible role uses a release directory with a symlink:
+
+```
+/opt/rapta/inspection/releases/1.0.0/
+/opt/rapta/inspection/current -> releases/1.0.0
+```
+
+**Rollback is a symlink flip, not a redeploy.**
+
+### The healthcheck asserts the version, not just liveness
+
+A deploy that silently left the old code running **fails** rather than reporting success. That is the
+same principle as everything else here: a control that passes while doing nothing is worse than no
+control, because it manufactures confidence.
+
 ## Quick start
 
 ```bash

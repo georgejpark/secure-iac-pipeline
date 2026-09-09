@@ -223,6 +223,60 @@ costs an afternoon. A pipeline pretending every environment is identical is one 
 
 ---
 
+
+## What is actually running
+
+**Say what this is, precisely.** Terraform provisions **LXC containers** on a Proxmox host. Ansible
+installs a small **Python HTTP service** into them under systemd. There is **no Docker, no Kubernetes
+and no FastAPI** in this stack.
+
+```
+app-dev-1    10.10.10.20:8080   {"status":"ok"}  {"version":"1.0.0"}
+app-stage-1  10.20.10.20:8080   {"status":"ok"}  {"version":"1.0.0"}
+app-prod-1   10.30.10.20:8080   {"status":"ok"}  {"version":"1.0.0"}
+app-prod-2   10.30.10.21:8080   {"status":"ok"}  {"version":"1.0.0"}
+```
+
+Production runs two containers because production specifies two.
+
+### Terraform provisions the machine; Ansible installs the application
+
+Keeping those separate is deliberate — rebuilding a container should not mean redeploying the app,
+and redeploying the app should not mean touching infrastructure.
+
+The Ansible role uses a release directory with a symlink:
+
+```
+/opt/rapta/inspection/releases/1.0.0/
+/opt/rapta/inspection/current -> releases/1.0.0
+```
+
+**Rollback is a symlink flip, not a redeploy.**
+
+### The healthcheck asserts the version, not just liveness
+
+A deploy that silently left the old code running **fails** rather than reporting success. That is the
+same principle as everything else here: a control that passes while doing nothing is worse than no
+control, because it manufactures confidence.
+
+
+## Deployment approval
+
+| Environment | Gate |
+|---|---|
+| `dev` | applies automatically on merge |
+| `stage` | **waits for a named reviewer** |
+| `prod` | **waits for a named reviewer** |
+
+Configured as GitHub Environment protection rules. Verified end to end: the run pauses, the approver
+is notified, and the deploy only proceeds once approved.
+
+Note a GitHub constraint worth knowing: **you cannot approve your own pull request.** Environment
+approvals are different and do permit self-approval, which is why the promotion gate sits there
+rather than on the PR.
+
+---
+
 ## 9. Benefits
 
 | Benefit | Why it matters |
