@@ -90,6 +90,12 @@ variable "host_octet_base" {
   }
 }
 
+variable "admin_ssh_keys" {
+  type        = list(string)
+  description = "Public keys authorised for the container's root account."
+  default     = []
+}
+
 variable "dns_servers" {
   type        = list(string)
   description = "Resolvers for the workload containers."
@@ -142,6 +148,13 @@ resource "proxmox_virtual_environment_container" "app" {
 
   initialization {
     hostname = "app-${var.environment}-${count.index + 1}"
+
+    # Key-based access from the moment the container exists. Without this a new
+    # container has no way in except the Proxmox console, which asks for a
+    # password nobody has set.
+    user_account {
+      keys = var.admin_ssh_keys
+    }
 
     # Without this the container inherits nothing and cannot resolve anything,
     # so apt and every outbound call fail with "Temporary failure resolving".
