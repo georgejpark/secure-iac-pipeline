@@ -1,0 +1,53 @@
+# gitleaks configuration
+#
+# Extends the upstream default ruleset rather than replacing it, so new rules
+# arrive with upstream releases instead of having to be maintained here.
+title = "secure-iac-pipeline"
+
+[extend]
+useDefault = true
+
+# --- Additional rules -------------------------------------------------------
+# The default set is good on vendor-issued tokens (AWS, GitHub, Stripe) and
+# weaker on the things that actually leak in an enterprise: internal database
+# URLs and private keys pasted into config.
+
+[[rules]]
+id = "private-key-pem"
+description = "Private key in PEM format"
+regex = '''-----BEGIN\s?(RSA|EC|DSA|OPENSSH|PGP|ENCRYPTED)?\s?PRIVATE KEY( BLOCK)?-----'''
+keywords = ["BEGIN", "PRIVATE KEY"]
+
+[[rules]]
+id = "db-connection-string-with-password"
+description = "Database connection string containing an inline password"
+regex = '''(?i)(postgres(ql)?|mysql|mongodb(\+srv)?|redis|amqp)://[a-z0-9_\-\.]+:[^\s:@/]{6,}@'''
+keywords = ["postgres", "mysql", "mongodb", "redis", "amqp"]
+
+[[rules]]
+id = "internal-jwt-signing-key"
+description = "JWT signing secret assigned to a literal"
+regex = '''(?i)(jwt|token|signing)[_\-]?(secret|key|passphrase)\s*[:=]\s*['"][^'"\s]{16,}['"]'''
+keywords = ["jwt", "signing", "secret"]
+
+# --- Allowlist --------------------------------------------------------------
+# Narrow and explicit. A broad allowlist is how a scanner quietly stops working.
+[allowlist]
+description = "Documented, reviewed exceptions"
+paths = [
+  # Terraform under terraform/insecure/ is deliberately vulnerable demo
+  # material. It contains NO real credentials -- the DB password is a variable.
+  '''terraform/insecure/.*''',
+  # The demo generates its fake credentials at runtime; nothing is committed.
+  '''scripts/demo_secret_persistence\.sh''',
+  # Documentation quotes policy IDs and redacted examples.
+  '''docs/.*\.md''',
+  # .env.example exists precisely to hold placeholder values. Allowlisted by
+  # PATH rather than by loosening the rule, so the rule still protects a real
+  # .env if one is ever staged by mistake.
+  '''\.env\.example$''',
+]
+regexes = [
+  # Placeholders used in examples.
+  '''(?i)(changeme|example|placeholder|your[-_]?key[-_]?here|xxxx+)''',
+]
