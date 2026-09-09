@@ -92,8 +92,9 @@ curl -s http://10.30.10.20:8080/version
 {"version": "1.1.0"}
 ```
 
-This matters more than it looks. When Ansible deploys, it checks this number. If the new code didn't
-actually start, the deploy fails instead of saying everything is fine.
+This matters more than it looks. The deploy script checks this number before it reports success, and
+it waits for the health check rather than asking once. If the new code didn't actually start, the
+deploy fails instead of telling you everything is fine.
 
 ---
 
@@ -175,7 +176,55 @@ Right password. Wrong network. Still refused.
 
 ---
 
-# TEST 9  -  Roll back and forward
+# TEST 9  -  Does the deploy step leave working servers alone?
+
+**What I am checking:** that I can run the deploy safely at any time, including twice by accident.
+
+Run it against an environment where everything is already working:
+
+```bash
+/root/install-app.sh prod
+```
+
+```
+environment=prod  version=1.1.0  containers=2
+  app-prod-1 (321)  already serving 1.1.0  - skipped
+  app-prod-2 (322)  already serving 1.1.0  - skipped
+done
+```
+
+**Good:** every line says `skipped`. Nothing was restarted, so nothing dropped a request.
+
+**Bad:** it reinstalls on a server that was already fine. That would mean the check at the top is
+wrong, and every deploy would cause an unnecessary restart of healthy production servers.
+
+## Why it is written this way
+
+The script asks each container what version it is serving before deciding to act. That is the
+difference between a deploy you can run confidently and one you only dare run during a window.
+
+## The failure I found by testing this
+
+The first version installed Python by checking `python3 -m venv --help`. That command succeeds on a
+stock Debian 13 container. But actually building the virtual environment then fails, because the
+help text ships in the standard library while the machinery ships in a separate package.
+
+So the check passed, the install was skipped, and the deploy broke two steps later with a confusing
+error about `ensurepip`.
+
+The fix was to test for the thing that is genuinely needed:
+
+```bash
+python3 -c "import ensurepip"
+```
+
+Worth saying out loud if it comes up: **a check that tests something adjacent to what you need is
+worse than no check at all**, because it reports success. That is the same shape as the gitleaks
+problem in the main story.
+
+---
+
+# TEST 10  -  Roll back and forward
 
 Go back to the old version:
 
@@ -212,7 +261,7 @@ Both versions stay on disk. Rolling back is pointing at the old folder.
 
 **From Proxmox:**
 
-5. The container list showing all nine
+5. The container list showing all nine (eight before the demo, nine after)
 6. A console session inside one of them
 
 **From the terminal:**
@@ -224,11 +273,22 @@ Both versions stay on disk. Rolling back is pointing at the old folder.
 # Quick reference
 
 ```bash
-ssh root@192.168.1.132              # get to the host first
+ssh root@192.168.1.132                # get to the host first
 
-pct list                            # what exists
-pct exec 301 -- bash                # shell into a container
-pct config 321                      # how a container is configured
+pct list                              # what exists
+pct exec 301 -- bash                  # shell into a container
+pct config 321                        # how a container is configured
 
-curl -s http://10.30.10.20:8080/    # ask an application who it is
+curl -s http://10.30.10.20:8080/      # ask an application who it is
+/root/install-app.sh prod             # install/repair an environment, safe to repeat
+```
+
+**The addresses are the containers, not the host.** Nothing listens on the Proxmox host itself, so
+`curl 127.0.0.1:8080` from the host prompt will always refuse the connection. That is correct
+behaviour. The applications live at:
+
+```
+dev      10.10.10.20
+stage    10.20.10.20
+prod     10.30.10.20 , 10.30.10.21 , and 10.30.10.22 after the demo
 ```

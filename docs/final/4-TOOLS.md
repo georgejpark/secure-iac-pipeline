@@ -82,14 +82,19 @@ cannot open the production file.
 
 You describe what you want. It works out what to create, change or remove.
 
-## Ansible
+## The deploy script
 
-**Installs software onto servers that already exist.**
+**Installs the application onto servers that already exist.**
 
-Terraform makes the box. Ansible puts the application on it.
+Terraform makes the box. The deploy script puts the application on it.
 
-They're kept separate on purpose. Rebuilding a server shouldn't mean redeploying the application, and
+They are kept separate on purpose. Rebuilding a server shouldn't mean redeploying the application, and
 redeploying the application shouldn't touch the server.
+
+It is a shell script, not Ansible. At this size Ansible would be a dependency to install and a
+playbook to maintain for work that is seven steps long. Ansible earns its place when you have many
+machine types and need the inventory and the module library. Say that plainly if asked. The honest
+answer is "not yet worth it", not "I didn't know about it".
 
 ## PostgreSQL
 
@@ -141,7 +146,7 @@ Staging and production each wait for somebody to approve.
 9. Terraform                work out what changes
 10. the policy script       check the plan before running it
 11. Terraform apply         build it
-12. Ansible                 install the application
+12. the deploy script       install the application
 ```
 
 **Steps 1 to 5 are free.** They cost nothing and catch most things.
@@ -160,7 +165,7 @@ Staging and production each wait for somebody to approve.
 
 **Terraform** free
 
-**Ansible** free
+**The deploy script** free, it is our own code
 
 **SOPS** free, open source
 

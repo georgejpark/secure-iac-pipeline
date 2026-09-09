@@ -67,7 +67,7 @@ and build a new server. About six minutes end to end.
 - Infrastructure code scanning, with different rules per environment
 - A pull request that cannot merge without a review and passing checks
 - Development deploying automatically, staging and production waiting for a person
-- Terraform building real servers, Ansible installing the application
+- Terraform building real servers, a separate deploy step installing the application
 - Each environment isolated from the others
 
 **Out of scope, and I will say so if asked:**
@@ -88,7 +88,8 @@ and build a new server. About six minutes end to end.
 A GitHub repository with Terraform in it.
 
 When I change that code and open a pull request, four checks run on machines I own. If they pass, and
-a person approves, Terraform builds Linux servers and Ansible installs a web application on them.
+a person approves, Terraform builds Linux servers and a deploy script installs a web application
+on them.
 
 Right now there are four servers running:
 
@@ -103,15 +104,17 @@ By the end of this demo there will be five.
 # How the next thirty minutes go
 
 ```
- 4 min    the story, no screen
- 2 min    set up the demo
- 6 min    prove a deleted password is still there
- 3 min    show the checks blocking bad code
- 4 min    show the pull request, blocked
- 2 min    merge it
- 4 min    watch it deploy, approve staging and production
- 4 min    show the new server answering
- 2 min    close
+ 4 min    STEP 1   the story, no screen
+ 2 min    STEP 2   the fix that fails
+ 6 min    STEP 3   prove a deleted password is still there
+ 3 min    STEP 4   show the checks blocking bad code
+ 4 min    STEP 5   show the pull request, blocked
+ 2 min    STEP 6   merge it
+ 5 min    STEP 7   watch it deploy, approve staging and production
+ 6 min    STEP 8   install and show the new server
+ 2 min    STEP 9   close
+--------
+34 min    leaves time for questions inside the 40
 ```
 
 They told me they will ask questions while I go. Good. Every interruption is a conversation.
@@ -122,7 +125,7 @@ They told me they will ask questions while I go. Good. Every interruption is a c
 
 ## Set up at 1:45
 
-Open two windows and leave them open.
+Open three windows and leave them open.
 
 **Window 1 - iTerm2, my Mac**
 
@@ -152,21 +155,46 @@ Open three tabs in it:
 
 ## Check before I start
 
-On the server window:
+Run all four. Each one takes seconds and each one has bitten me.
+
+**1. The containers are up.**
 
 ```bash
 pct list
 ```
 
-Should show 8 containers, all `running`.
+8 containers, every one `running`.
+
+**2. The four applications answer.**
 
 ```bash
 for h in 10.10.10.20 10.20.10.20 10.30.10.20 10.30.10.21; do
-  curl -s --max-time 5 http://$h:8080/health; echo
+  printf "%-14s " $h; curl -s --max-time 5 http://$h:8080/health; echo
 done
 ```
 
-Should give four `{"status": "ok"}`.
+Four `{"status": "ok"}`.
+
+> Note for me: these addresses are the *containers*. Nothing listens on the Proxmox host itself, so
+> `curl 127.0.0.1:8080` at the host prompt refuses the connection. That is correct, not a fault.
+> Do not panic if I fat-finger it live.
+
+**3. The deploy script is there and its source files are staged.**
+
+```bash
+ls -l /root/install-app.sh /opt/app-source/
+```
+
+Expect the script plus four files: `app.py`, `requirements.txt`, `VERSION`, `inspection-service.service`.
+
+**4. VMID 323 is free.**
+
+```bash
+pct list | grep 323 || echo "323 free - good"
+```
+
+Must say **323 free**. Terraform creates that container during the demo; if something is already
+sitting on that ID the apply fails.
 
 ## Last things
 
@@ -389,7 +417,7 @@ Wait about 30 seconds. Staging goes green.
 
 ---
 
-# STEP 8  -  Show the new server      (5 min)
+# STEP 8  -  Install and show the new server   (6 min)
 
 **Switch to the SERVER window.**
 
@@ -399,7 +427,53 @@ pct list
 
 > "There is a new one. app-prod-3. That did not exist six minutes ago."
 
-**Then ask it who it is:**
+It is an empty machine. Terraform built it; nothing has installed the application on it yet.
+**Say that out loud before anyone asks:**
+
+> "Terraform talks to the Proxmox API to build machines. It never logs into them. Installing the
+> application is a separate stage, and I keep it separate on purpose, so rebuilding a server does not
+> mean redeploying the application, and redeploying does not mean rebuilding."
+
+**Then install it:**
+
+```bash
+/root/install-app.sh prod
+```
+
+Takes about 25 seconds. Expect exactly this:
+
+```
+environment=prod  version=1.1.0  containers=3
+  app-prod-1 (321)  already serving 1.1.0  - skipped
+  app-prod-2 (322)  already serving 1.1.0  - skipped
+  app-prod-3 (323)  installing 1.1.0 ...
+    app-prod-3 serving {"version": "1.1.0"}
+done
+```
+
+**Point at the two skipped lines:**
+
+> "The two servers that were already running were left alone. It checks what each one is serving
+> before it touches it. I can run this as many times as I like and it only acts where something is
+> actually missing."
+
+## What that script does
+
+Seven steps, in this order, on any container that is not already serving:
+
+1. **Creates a service account** called `rapta`. The application does not run as root.
+2. **Installs Python and curl** if they are missing.
+3. **Copies the release** into its own folder, `releases/1.1.0`. The old release stays on disk.
+4. **Builds a virtual environment** inside that release folder, so two releases can need different
+   packages without fighting.
+5. **Moves one symlink**, `current` → `releases/1.1.0`. That single pointer move *is* the release.
+6. **Installs the systemd unit**, which points at `current`, never at a version number. That is why a
+   rollback needs no file edited. You move the symlink back and restart.
+7. **Waits for the health check to pass** before reporting success. The application deliberately
+   answers 503 for the first two seconds, so a check that fires immediately would report a false
+   failure.
+
+**Then ask the new server who it is:**
 
 ```bash
 curl -s http://10.30.10.22:8080/
@@ -414,7 +488,7 @@ curl -s http://10.30.10.22:8080/
 }
 ```
 
-**Then show all of them together:**
+**Then show all five together:**
 
 ```bash
 for h in 10.10.10.20 10.20.10.20 10.30.10.20 10.30.10.21 10.30.10.22; do
@@ -422,18 +496,18 @@ for h in 10.10.10.20 10.20.10.20 10.30.10.20 10.30.10.21 10.30.10.22; do
 done
 ```
 
-> "Five machines. Each one knows which environment it is. Three in production, because the file now
-> says three."
+> "Five machines. Each one knows which environment it is, because it reads it from its own hostname.
+> Three in production, because the file now says three."
 
-**If the new one does not answer yet:**
+## If something goes wrong here
 
-Terraform built the machine. Ansible has not installed the application on it. Say that, because it is
-the honest answer and it shows the two are deliberately separate:
+**"Connection refused" on the curl.** Check you are using the container address, not the host.
+The applications run *inside* the containers on `10.x.10.20+`. Nothing listens on the Proxmox host
+itself, so `curl 127.0.0.1:8080` from the host prompt will always refuse. That is correct behaviour,
+not a fault.
 
-> "Terraform builds the machine. Ansible installs the application. I keep those separate on purpose,
-> so rebuilding a server does not mean redeploying the application."
-
----
+**The install script reports DID NOT COME UP.** It prints the service status underneath. Run it
+again. It is safe to repeat and will retry only the container that failed.
 
 # STEP 9  -  Close                    (2 min)
 
