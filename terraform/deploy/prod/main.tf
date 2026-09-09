@@ -53,7 +53,7 @@ module "workload" {
 
   environment   = "prod"
   vmid_base     = 321
-  replica_count = 2
+  replica_count = 3
   cores         = 2
   memory_mb     = 2048
   disk_gb       = 20
