@@ -90,7 +90,7 @@ jobs:
       - name: Upload gitleaks SARIF
         if: always()
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: gitleaks.sarif
           category: gitleaks
@@ -172,15 +172,18 @@ jobs:
           checkov -d terraform/envs/${{ matrix.environment }} \
             --output json --output-file-path checkov-report \
             --soft-fail
+          # checkov names this file results_sarif.sarif, not results.sarif --
+          # getting that wrong makes the upload step fail silently and leaves a
+          # red annotation on an otherwise green run.
           checkov -d terraform/envs/${{ matrix.environment }} \
             --output sarif --output-file-path . --soft-fail
 
       - name: Upload SARIF
         if: always()
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: results.sarif
+          sarif_file: results_sarif.sarif
           category: checkov-${{ matrix.environment }}
 
       - name: AI triage
