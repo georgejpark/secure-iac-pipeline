@@ -49,7 +49,15 @@ POLICIES: list[dict[str, Any]] = [
         "title": "Network interface must have the firewall enabled",
         "why": "Without it the container bypasses the Proxmox firewall entirely, so any "
                "host segmentation policy silently does not apply.",
-        "enforced_in": ("dev", "stage", "prod"),
+        # Enforced NOWHERE, deliberately. Enabling the per-container firewall
+        # breaks return traffic for outbound connections on this platform, and
+        # segment isolation is enforced by the host forward policy instead --
+        # verified dev->prod and prod->dev, both blocked.
+        #
+        # Left in the table rather than deleted so the decision is visible. A
+        # policy silently removed looks like an oversight; a policy that says
+        # why it is not enforced is a decision.
+        "enforced_in": (),
         "check": lambda v: all(
             n.get("firewall") is True for n in (v.get("network_interface") or [{}])
         ),

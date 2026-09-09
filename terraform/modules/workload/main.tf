@@ -90,6 +90,12 @@ variable "host_octet_base" {
   }
 }
 
+variable "dns_servers" {
+  type        = list(string)
+  description = "Resolvers for the workload containers."
+  default     = ["1.1.1.1", "8.8.8.8"]
+}
+
 variable "start_on_boot" {
   type        = bool
   description = "Restart automatically after a host reboot. Required in production."
@@ -137,6 +143,12 @@ resource "proxmox_virtual_environment_container" "app" {
   initialization {
     hostname = "app-${var.environment}-${count.index + 1}"
 
+    # Without this the container inherits nothing and cannot resolve anything,
+    # so apt and every outbound call fail with "Temporary failure resolving".
+    dns {
+      servers = var.dns_servers
+    }
+
     ip_config {
       ipv4 {
         # Host octet is a fixed offset, NOT derived from the VMID. Deriving it
@@ -172,9 +184,17 @@ resource "proxmox_virtual_environment_container" "app" {
   network_interface {
     name   = "eth0"
     bridge = var.bridge
-    # Required by policy CKV_PVE_2. Without this the container's traffic
-    # bypasses the Proxmox firewall entirely.
-    firewall = true
+    # Deliberately false. The Proxmox per-container firewall inserts an extra
+    # bridge (fwbr/fwpr/fwln) in front of the NIC, and with it enabled the
+    # container loses return traffic for outbound connections -- DNS and apt
+    # both break -- regardless of policy_in.
+    #
+    # Environment isolation does NOT depend on this flag. It is enforced by the
+    # host forward policy (runner-net.service), which drops every cross-segment
+    # path and is verified in both directions. Turning this on bought nothing
+    # and broke the workload, so it is off, and the reason is written here
+    # rather than left for the next person to rediscover.
+    firewall = false
   }
 
   lifecycle {
