@@ -37,8 +37,8 @@ git config user.email "demo@example.com"; git config user.name "Demo"
 
 cat > .env <<EOF
 DATABASE_URL=postgresql://claims_app:$(randstr 18)@db.internal:5432/claims
-CLOUD_ACCESS_KEY_ID=${FAKE_KEY}
-CLOUD_SECRET_ACCESS_KEY=${FAKE_SEC}
+AWS_ACCESS_KEY_ID=${FAKE_KEY}
+AWS_SECRET_ACCESS_KEY=${FAKE_SEC}
 JWT_SIGNING_KEY=$(randstr 44)
 EOF
 echo "app running" > app.py

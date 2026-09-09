@@ -1,0 +1,1440 @@
+{
+    "check_type": "terraform",
+    "results": {
+        "failed_checks": [
+            {
+                "check_id": "CKV_AWS_111",
+                "bc_check_id": "BC_AWS_IAM_57",
+                "check_name": "Ensure IAM policies does not allow write access without constraints",
+                "check_result": {
+                    "result": "FAILED",
+                    "evaluated_keys": [
+                        "statement/[0]/actions"
+                    ]
+                },
+                "code_block": [
+                    [
+                        83,
+                        "data \"aws_iam_policy_document\" \"kms\" {\n"
+                    ],
+                    [
+                        84,
+                        "  statement {\n"
+                    ],
+                    [
+                        85,
+                        "    sid       = \"EnableAccountAdministration\"\n"
+                    ],
+                    [
+                        86,
+                        "    effect    = \"Allow\"\n"
+                    ],
+                    [
+                        87,
+                        "    actions   = [\"kms:*\"]\n"
+                    ],
+                    [
+                        88,
+                        "    resources = [\"*\"]\n"
+                    ],
+                    [
+                        89,
+                        "    principals {\n"
+                    ],
+                    [
+                        90,
+                        "      type        = \"AWS\"\n"
+                    ],
+                    [
+                        91,
+                        "      identifiers = [\"arn:aws:iam::${data.aws_caller_identity.current.account_id}:root\"]\n"
+                    ],
+                    [
+                        92,
+                        "    }\n"
+                    ],
+                    [
+                        93,
+                        "  }\n"
+                    ],
+                    [
+                        94,
+                        "}\n"
+                    ]
+                ],
+                "file_path": "/../../modules/claims-platform/main.tf",
+                "file_abs_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "repo_file_path": "/terraform/modules/claims-platform/main.tf",
+                "file_line_range": [
+                    83,
+                    94
+                ],
+                "resource": "module.claims_platform.aws_iam_policy_document.kms",
+                "evaluations": null,
+                "check_class": "checkov.terraform.checks.data.aws.IAMWriteAccess",
+                "fixed_definition": null,
+                "entity_tags": null,
+                "caller_file_path": "/main.tf",
+                "caller_file_line_range": [
+                    66,
+                    79
+                ],
+                "resource_address": null,
+                "severity": null,
+                "bc_category": null,
+                "benchmarks": null,
+                "description": null,
+                "short_description": null,
+                "vulnerability_details": null,
+                "connected_node": null,
+                "guideline": "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-iam-policies/ensure-iam-policies-do-not-allow-write-access-without-constraint",
+                "details": [],
+                "check_len": null,
+                "definition_context_file_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "breadcrumbs": {
+                    "source_module_": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "idx": 0,
+                            "source_module_object": null
+                        }
+                    ]
+                }
+            },
+            {
+                "check_id": "CKV_AWS_356",
+                "bc_check_id": "BC_AWS_IAM_89",
+                "check_name": "Ensure no IAM policies documents allow \"*\" as a statement's resource for restrictable actions",
+                "check_result": {
+                    "result": "FAILED",
+                    "evaluated_keys": [
+                        "statement/[0]/actions"
+                    ]
+                },
+                "code_block": [
+                    [
+                        83,
+                        "data \"aws_iam_policy_document\" \"kms\" {\n"
+                    ],
+                    [
+                        84,
+                        "  statement {\n"
+                    ],
+                    [
+                        85,
+                        "    sid       = \"EnableAccountAdministration\"\n"
+                    ],
+                    [
+                        86,
+                        "    effect    = \"Allow\"\n"
+                    ],
+                    [
+                        87,
+                        "    actions   = [\"kms:*\"]\n"
+                    ],
+                    [
+                        88,
+                        "    resources = [\"*\"]\n"
+                    ],
+                    [
+                        89,
+                        "    principals {\n"
+                    ],
+                    [
+                        90,
+                        "      type        = \"AWS\"\n"
+                    ],
+                    [
+                        91,
+                        "      identifiers = [\"arn:aws:iam::${data.aws_caller_identity.current.account_id}:root\"]\n"
+                    ],
+                    [
+                        92,
+                        "    }\n"
+                    ],
+                    [
+                        93,
+                        "  }\n"
+                    ],
+                    [
+                        94,
+                        "}\n"
+                    ]
+                ],
+                "file_path": "/../../modules/claims-platform/main.tf",
+                "file_abs_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "repo_file_path": "/terraform/modules/claims-platform/main.tf",
+                "file_line_range": [
+                    83,
+                    94
+                ],
+                "resource": "module.claims_platform.aws_iam_policy_document.kms",
+                "evaluations": null,
+                "check_class": "checkov.terraform.checks.data.aws.ResourcePolicyDocument",
+                "fixed_definition": null,
+                "entity_tags": null,
+                "caller_file_path": "/main.tf",
+                "caller_file_line_range": [
+                    66,
+                    79
+                ],
+                "resource_address": null,
+                "severity": null,
+                "bc_category": null,
+                "benchmarks": null,
+                "description": null,
+                "short_description": null,
+                "vulnerability_details": null,
+                "connected_node": null,
+                "guideline": "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-iam-policies/bc-aws-356",
+                "details": [],
+                "check_len": null,
+                "definition_context_file_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "breadcrumbs": {
+                    "source_module_": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "idx": 0,
+                            "source_module_object": null
+                        }
+                    ]
+                }
+            },
+            {
+                "check_id": "CKV_AWS_109",
+                "bc_check_id": "BC_AWS_IAM_56",
+                "check_name": "Ensure IAM policies does not allow permissions management / resource exposure without constraints",
+                "check_result": {
+                    "result": "FAILED",
+                    "evaluated_keys": [
+                        "statement/[0]/actions"
+                    ]
+                },
+                "code_block": [
+                    [
+                        83,
+                        "data \"aws_iam_policy_document\" \"kms\" {\n"
+                    ],
+                    [
+                        84,
+                        "  statement {\n"
+                    ],
+                    [
+                        85,
+                        "    sid       = \"EnableAccountAdministration\"\n"
+                    ],
+                    [
+                        86,
+                        "    effect    = \"Allow\"\n"
+                    ],
+                    [
+                        87,
+                        "    actions   = [\"kms:*\"]\n"
+                    ],
+                    [
+                        88,
+                        "    resources = [\"*\"]\n"
+                    ],
+                    [
+                        89,
+                        "    principals {\n"
+                    ],
+                    [
+                        90,
+                        "      type        = \"AWS\"\n"
+                    ],
+                    [
+                        91,
+                        "      identifiers = [\"arn:aws:iam::${data.aws_caller_identity.current.account_id}:root\"]\n"
+                    ],
+                    [
+                        92,
+                        "    }\n"
+                    ],
+                    [
+                        93,
+                        "  }\n"
+                    ],
+                    [
+                        94,
+                        "}\n"
+                    ]
+                ],
+                "file_path": "/../../modules/claims-platform/main.tf",
+                "file_abs_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "repo_file_path": "/terraform/modules/claims-platform/main.tf",
+                "file_line_range": [
+                    83,
+                    94
+                ],
+                "resource": "module.claims_platform.aws_iam_policy_document.kms",
+                "evaluations": null,
+                "check_class": "checkov.terraform.checks.data.aws.IAMPermissionsManagement",
+                "fixed_definition": null,
+                "entity_tags": null,
+                "caller_file_path": "/main.tf",
+                "caller_file_line_range": [
+                    66,
+                    79
+                ],
+                "resource_address": null,
+                "severity": null,
+                "bc_category": null,
+                "benchmarks": null,
+                "description": null,
+                "short_description": null,
+                "vulnerability_details": null,
+                "connected_node": null,
+                "guideline": "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-iam-policies/ensure-iam-policies-do-not-allow-permissions-management-resource-exposure-without-constraint",
+                "details": [],
+                "check_len": null,
+                "definition_context_file_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "breadcrumbs": {
+                    "source_module_": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "idx": 0,
+                            "source_module_object": null
+                        }
+                    ]
+                }
+            },
+            {
+                "check_id": "CKV2_AWS_5",
+                "bc_check_id": "BC_AWS_NETWORKING_51",
+                "check_name": "Ensure that Security Groups are attached to another resource",
+                "check_result": {
+                    "result": "FAILED",
+                    "entity": {
+                        "aws_security_group": {
+                            "app_tier": {
+                                "__end_line__": 230,
+                                "__start_line__": 209,
+                                "description": [
+                                    "Application tier security group"
+                                ],
+                                "egress": [
+                                    {
+                                        "cidr_blocks": [
+                                            [
+                                                "10.30.0.0/16"
+                                            ]
+                                        ],
+                                        "description": [
+                                            "HTTPS to AWS service endpoints"
+                                        ],
+                                        "from_port": [
+                                            443
+                                        ],
+                                        "protocol": [
+                                            "tcp"
+                                        ],
+                                        "to_port": [
+                                            443
+                                        ]
+                                    }
+                                ],
+                                "ingress": [
+                                    {
+                                        "cidr_blocks": [
+                                            [
+                                                "10.30.0.0/16"
+                                            ]
+                                        ],
+                                        "description": [
+                                            "HTTPS from the corporate network"
+                                        ],
+                                        "from_port": [
+                                            443
+                                        ],
+                                        "protocol": [
+                                            "tcp"
+                                        ],
+                                        "to_port": [
+                                            443
+                                        ]
+                                    }
+                                ],
+                                "name": [
+                                    "app-tier-prod"
+                                ],
+                                "vpc_id": [
+                                    "var.vpc_id"
+                                ],
+                                "__address__": "module.claims_platform.aws_security_group.app_tier",
+                                "__provider_address__": "aws.default"
+                            }
+                        }
+                    },
+                    "evaluated_keys": [
+                        "resource_type",
+                        "networking"
+                    ]
+                },
+                "code_block": [
+                    [
+                        209,
+                        "resource \"aws_security_group\" \"app_tier\" {\n"
+                    ],
+                    [
+                        210,
+                        "  name        = \"app-tier-${var.environment}\"\n"
+                    ],
+                    [
+                        211,
+                        "  description = \"Application tier security group\"\n"
+                    ],
+                    [
+                        212,
+                        "  vpc_id      = var.vpc_id\n"
+                    ],
+                    [
+                        213,
+                        "\n"
+                    ],
+                    [
+                        214,
+                        "  ingress {\n"
+                    ],
+                    [
+                        215,
+                        "    description = \"HTTPS from the corporate network\"\n"
+                    ],
+                    [
+                        216,
+                        "    from_port   = 443\n"
+                    ],
+                    [
+                        217,
+                        "    to_port     = 443\n"
+                    ],
+                    [
+                        218,
+                        "    protocol    = \"tcp\"\n"
+                    ],
+                    [
+                        219,
+                        "    cidr_blocks = [var.trusted_cidr]\n"
+                    ],
+                    [
+                        220,
+                        "  }\n"
+                    ],
+                    [
+                        221,
+                        "\n"
+                    ],
+                    [
+                        222,
+                        "  # FIX CKV_AWS_382: egress is scoped, not wide open.\n"
+                    ],
+                    [
+                        223,
+                        "  egress {\n"
+                    ],
+                    [
+                        224,
+                        "    description = \"HTTPS to AWS service endpoints\"\n"
+                    ],
+                    [
+                        225,
+                        "    from_port   = 443\n"
+                    ],
+                    [
+                        226,
+                        "    to_port     = 443\n"
+                    ],
+                    [
+                        227,
+                        "    protocol    = \"tcp\"\n"
+                    ],
+                    [
+                        228,
+                        "    cidr_blocks = [var.trusted_cidr]\n"
+                    ],
+                    [
+                        229,
+                        "  }\n"
+                    ],
+                    [
+                        230,
+                        "}\n"
+                    ]
+                ],
+                "file_path": "/../../modules/claims-platform/main.tf",
+                "file_abs_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "repo_file_path": "/terraform/modules/claims-platform/main.tf",
+                "file_line_range": [
+                    209,
+                    230
+                ],
+                "resource": "module.claims_platform.aws_security_group.app_tier",
+                "evaluations": null,
+                "check_class": "checkov.common.graph.checks_infra.base_check",
+                "fixed_definition": null,
+                "entity_tags": null,
+                "caller_file_path": null,
+                "caller_file_line_range": null,
+                "resource_address": null,
+                "severity": null,
+                "bc_category": null,
+                "benchmarks": null,
+                "description": null,
+                "short_description": null,
+                "vulnerability_details": null,
+                "connected_node": null,
+                "guideline": "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-networking-policies/ensure-that-security-groups-are-attached-to-ec2-instances-or-elastic-network-interfaces-enis",
+                "details": [],
+                "check_len": null,
+                "definition_context_file_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "breadcrumbs": {
+                    "ingress.cidr_blocks.0": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "trusted_cidr",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "ingress.cidr_blocks": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "trusted_cidr",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "name": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "environment",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "egress.cidr_blocks.0": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "trusted_cidr",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "egress.cidr_blocks": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "trusted_cidr",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "source_module_": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "idx": 0,
+                            "source_module_object": null
+                        }
+                    ]
+                }
+            },
+            {
+                "check_id": "CKV2_AWS_62",
+                "bc_check_id": "BC_AWS_LOGGING_36",
+                "check_name": "Ensure S3 buckets should have event notifications enabled",
+                "check_result": {
+                    "result": "FAILED",
+                    "entity": {
+                        "aws_s3_bucket": {
+                            "access_logs": {
+                                "__end_line__": 99,
+                                "__start_line__": 97,
+                                "bucket": [
+                                    "tm-access-logs-prod"
+                                ],
+                                "__address__": "module.claims_platform.aws_s3_bucket.access_logs",
+                                "__provider_address__": "aws.default"
+                            }
+                        }
+                    },
+                    "evaluated_keys": [
+                        "resource_type"
+                    ]
+                },
+                "code_block": [
+                    [
+                        97,
+                        "resource \"aws_s3_bucket\" \"access_logs\" {\n"
+                    ],
+                    [
+                        98,
+                        "  bucket = \"tm-access-logs-${var.environment}\"\n"
+                    ],
+                    [
+                        99,
+                        "}\n"
+                    ]
+                ],
+                "file_path": "/../../modules/claims-platform/main.tf",
+                "file_abs_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "repo_file_path": "/terraform/modules/claims-platform/main.tf",
+                "file_line_range": [
+                    97,
+                    99
+                ],
+                "resource": "module.claims_platform.aws_s3_bucket.access_logs",
+                "evaluations": null,
+                "check_class": "checkov.common.graph.checks_infra.base_check",
+                "fixed_definition": null,
+                "entity_tags": null,
+                "caller_file_path": null,
+                "caller_file_line_range": null,
+                "resource_address": null,
+                "severity": null,
+                "bc_category": null,
+                "benchmarks": null,
+                "description": null,
+                "short_description": null,
+                "vulnerability_details": null,
+                "connected_node": null,
+                "guideline": "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-logging-policies/bc-aws-2-62",
+                "details": [],
+                "check_len": null,
+                "definition_context_file_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "breadcrumbs": {
+                    "bucket": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "environment",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "source_module_": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "idx": 0,
+                            "source_module_object": null
+                        }
+                    ]
+                }
+            },
+            {
+                "check_id": "CKV2_AWS_62",
+                "bc_check_id": "BC_AWS_LOGGING_36",
+                "check_name": "Ensure S3 buckets should have event notifications enabled",
+                "check_result": {
+                    "result": "FAILED",
+                    "entity": {
+                        "aws_s3_bucket": {
+                            "claims_documents": {
+                                "__end_line__": 134,
+                                "__start_line__": 127,
+                                "bucket": [
+                                    "tm-claims-documents-prod"
+                                ],
+                                "tags": [
+                                    {
+                                        "DataClass": "confidential",
+                                        "Environment": "prod"
+                                    }
+                                ],
+                                "__address__": "module.claims_platform.aws_s3_bucket.claims_documents",
+                                "__provider_address__": "aws.default"
+                            }
+                        }
+                    },
+                    "evaluated_keys": [
+                        "resource_type"
+                    ]
+                },
+                "code_block": [
+                    [
+                        127,
+                        "resource \"aws_s3_bucket\" \"claims_documents\" {\n"
+                    ],
+                    [
+                        128,
+                        "  bucket = \"tm-claims-documents-${var.environment}\"\n"
+                    ],
+                    [
+                        129,
+                        "\n"
+                    ],
+                    [
+                        130,
+                        "  tags = {\n"
+                    ],
+                    [
+                        131,
+                        "    Environment = var.environment\n"
+                    ],
+                    [
+                        132,
+                        "    DataClass   = \"confidential\"\n"
+                    ],
+                    [
+                        133,
+                        "  }\n"
+                    ],
+                    [
+                        134,
+                        "}\n"
+                    ]
+                ],
+                "file_path": "/../../modules/claims-platform/main.tf",
+                "file_abs_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "repo_file_path": "/terraform/modules/claims-platform/main.tf",
+                "file_line_range": [
+                    127,
+                    134
+                ],
+                "resource": "module.claims_platform.aws_s3_bucket.claims_documents",
+                "evaluations": null,
+                "check_class": "checkov.common.graph.checks_infra.base_check",
+                "fixed_definition": null,
+                "entity_tags": {
+                    "DataClass": "confidential",
+                    "Environment": "prod"
+                },
+                "caller_file_path": null,
+                "caller_file_line_range": null,
+                "resource_address": null,
+                "severity": null,
+                "bc_category": null,
+                "benchmarks": null,
+                "description": null,
+                "short_description": null,
+                "vulnerability_details": null,
+                "connected_node": null,
+                "guideline": "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-logging-policies/bc-aws-2-62",
+                "details": [],
+                "check_len": null,
+                "definition_context_file_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "breadcrumbs": {
+                    "tags.Environment": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "environment",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "bucket": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "environment",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "source_module_": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "idx": 0,
+                            "source_module_object": null
+                        }
+                    ]
+                }
+            },
+            {
+                "check_id": "CKV2_AWS_30",
+                "bc_check_id": "BC_AWS_LOGGING_32",
+                "check_name": "Ensure Postgres RDS as aws_db_instance has Query Logging enabled",
+                "check_result": {
+                    "result": "FAILED",
+                    "entity": {
+                        "aws_db_instance": {
+                            "policy_admin": {
+                                "__end_line__": 286,
+                                "__start_line__": 238,
+                                "allocated_storage": [
+                                    100
+                                ],
+                                "auto_minor_version_upgrade": [
+                                    true
+                                ],
+                                "backup_retention_period": [
+                                    30
+                                ],
+                                "copy_tags_to_snapshot": [
+                                    true
+                                ],
+                                "db_name": [
+                                    "policyadmin"
+                                ],
+                                "deletion_protection": [
+                                    true
+                                ],
+                                "enabled_cloudwatch_logs_exports": [
+                                    [
+                                        "postgresql",
+                                        "upgrade"
+                                    ]
+                                ],
+                                "engine": [
+                                    "postgres"
+                                ],
+                                "engine_version": [
+                                    "15.4"
+                                ],
+                                "final_snapshot_identifier": [
+                                    "policy-admin-prod-final"
+                                ],
+                                "iam_database_authentication_enabled": [
+                                    true
+                                ],
+                                "identifier": [
+                                    "policy-admin-prod"
+                                ],
+                                "instance_class": [
+                                    "db.r6g.xlarge"
+                                ],
+                                "kms_key_id": [
+                                    "aws_kms_key.data.arn"
+                                ],
+                                "manage_master_user_password": [
+                                    true
+                                ],
+                                "master_user_secret_kms_key_id": [
+                                    "aws_kms_key.data.arn"
+                                ],
+                                "monitoring_interval": [
+                                    60
+                                ],
+                                "monitoring_role_arn": [
+                                    "var.monitoring_role_arn"
+                                ],
+                                "multi_az": [
+                                    true
+                                ],
+                                "performance_insights_enabled": [
+                                    true
+                                ],
+                                "performance_insights_kms_key_id": [
+                                    "aws_kms_key.data.arn"
+                                ],
+                                "publicly_accessible": [
+                                    false
+                                ],
+                                "skip_final_snapshot": [
+                                    false
+                                ],
+                                "storage_encrypted": [
+                                    true
+                                ],
+                                "username": [
+                                    "dbadmin"
+                                ],
+                                "__address__": "module.claims_platform.aws_db_instance.policy_admin",
+                                "__provider_address__": "aws.default"
+                            }
+                        }
+                    },
+                    "evaluated_keys": [
+                        "resource_type",
+                        "parameter/*/name",
+                        "engine"
+                    ]
+                },
+                "code_block": [
+                    [
+                        238,
+                        "resource \"aws_db_instance\" \"policy_admin\" {\n"
+                    ],
+                    [
+                        239,
+                        "  identifier        = \"policy-admin-${var.environment}\"\n"
+                    ],
+                    [
+                        240,
+                        "  engine            = \"postgres\"\n"
+                    ],
+                    [
+                        241,
+                        "  engine_version    = \"15.4\"\n"
+                    ],
+                    [
+                        242,
+                        "  instance_class    = var.instance_class\n"
+                    ],
+                    [
+                        243,
+                        "  allocated_storage = 100\n"
+                    ],
+                    [
+                        244,
+                        "  db_name           = \"policyadmin\"\n"
+                    ],
+                    [
+                        245,
+                        "  username          = \"dbadmin\"\n"
+                    ],
+                    [
+                        246,
+                        "\n"
+                    ],
+                    [
+                        247,
+                        "  # FIX CKV_AWS_16: encrypted at rest with the CMK.\n"
+                    ],
+                    [
+                        248,
+                        "  storage_encrypted = true\n"
+                    ],
+                    [
+                        249,
+                        "  kms_key_id        = aws_kms_key.data.arn\n"
+                    ],
+                    [
+                        250,
+                        "\n"
+                    ],
+                    [
+                        251,
+                        "  # FIX CKV_AWS_17: never reachable from the internet.\n"
+                    ],
+                    [
+                        252,
+                        "  publicly_accessible = false\n"
+                    ],
+                    [
+                        253,
+                        "\n"
+                    ],
+                    [
+                        254,
+                        "  # FIX CKV_AWS_118: enhanced monitoring on.\n"
+                    ],
+                    [
+                        255,
+                        "  monitoring_interval = 60\n"
+                    ],
+                    [
+                        256,
+                        "  monitoring_role_arn = var.monitoring_role_arn\n"
+                    ],
+                    [
+                        257,
+                        "\n"
+                    ],
+                    [
+                        258,
+                        "  # FIX CKV_AWS_129: ship logs where they can be alerted on.\n"
+                    ],
+                    [
+                        259,
+                        "  enabled_cloudwatch_logs_exports = [\"postgresql\", \"upgrade\"]\n"
+                    ],
+                    [
+                        260,
+                        "\n"
+                    ],
+                    [
+                        261,
+                        "  # FIX CKV_AWS_293: deletion protection on for a system of record.\n"
+                    ],
+                    [
+                        262,
+                        "  deletion_protection = var.deletion_protection\n"
+                    ],
+                    [
+                        263,
+                        "\n"
+                    ],
+                    [
+                        264,
+                        "  # FIX CKV_AWS_157: survive an AZ failure. Required in prod, optional below.\n"
+                    ],
+                    [
+                        265,
+                        "  multi_az = var.multi_az\n"
+                    ],
+                    [
+                        266,
+                        "\n"
+                    ],
+                    [
+                        267,
+                        "  # FIX CKV_AWS_161: rotate credentials through Secrets Manager, so no\n"
+                    ],
+                    [
+                        268,
+                        "  # password is ever passed in as a Terraform variable.\n"
+                    ],
+                    [
+                        269,
+                        "  manage_master_user_password   = true\n"
+                    ],
+                    [
+                        270,
+                        "  master_user_secret_kms_key_id = aws_kms_key.data.arn\n"
+                    ],
+                    [
+                        271,
+                        "\n"
+                    ],
+                    [
+                        272,
+                        "  # FIX CKV_AWS_226: apply security patches automatically.\n"
+                    ],
+                    [
+                        273,
+                        "  auto_minor_version_upgrade = true\n"
+                    ],
+                    [
+                        274,
+                        "\n"
+                    ],
+                    [
+                        275,
+                        "  # FIX CKV_AWS_161: IAM auth removes long-lived database passwords entirely.\n"
+                    ],
+                    [
+                        276,
+                        "  iam_database_authentication_enabled = true\n"
+                    ],
+                    [
+                        277,
+                        "\n"
+                    ],
+                    [
+                        278,
+                        "  # FIX CKV_AWS_353: performance insights, encrypted with the same CMK.\n"
+                    ],
+                    [
+                        279,
+                        "  performance_insights_enabled    = true\n"
+                    ],
+                    [
+                        280,
+                        "  performance_insights_kms_key_id = aws_kms_key.data.arn\n"
+                    ],
+                    [
+                        281,
+                        "\n"
+                    ],
+                    [
+                        282,
+                        "  backup_retention_period   = 30\n"
+                    ],
+                    [
+                        283,
+                        "  copy_tags_to_snapshot     = true # FIX CKV2_AWS_60\n"
+                    ],
+                    [
+                        284,
+                        "  skip_final_snapshot       = false\n"
+                    ],
+                    [
+                        285,
+                        "  final_snapshot_identifier = \"policy-admin-${var.environment}-final\"\n"
+                    ],
+                    [
+                        286,
+                        "}\n"
+                    ]
+                ],
+                "file_path": "/../../modules/claims-platform/main.tf",
+                "file_abs_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "repo_file_path": "/terraform/modules/claims-platform/main.tf",
+                "file_line_range": [
+                    238,
+                    286
+                ],
+                "resource": "module.claims_platform.aws_db_instance.policy_admin",
+                "evaluations": null,
+                "check_class": "checkov.common.graph.checks_infra.base_check",
+                "fixed_definition": null,
+                "entity_tags": null,
+                "caller_file_path": null,
+                "caller_file_line_range": null,
+                "resource_address": null,
+                "severity": null,
+                "bc_category": null,
+                "benchmarks": null,
+                "description": null,
+                "short_description": null,
+                "vulnerability_details": null,
+                "connected_node": null,
+                "guideline": "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-general-policies/ensure-postgres-rds-has-query-logging-enabled",
+                "details": [],
+                "check_len": null,
+                "definition_context_file_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "breadcrumbs": {
+                    "multi_az": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "multi_az",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "deletion_protection": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "deletion_protection",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "final_snapshot_identifier": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "environment",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "identifier": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "environment",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "instance_class": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "instance_class",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "source_module_": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "idx": 0,
+                            "source_module_object": null
+                        }
+                    ]
+                }
+            },
+            {
+                "check_id": "CKV_AWS_144",
+                "bc_check_id": "BC_AWS_GENERAL_72",
+                "check_name": "Ensure that S3 bucket has cross-region replication enabled",
+                "check_result": {
+                    "result": "FAILED",
+                    "entity": {
+                        "aws_s3_bucket": {
+                            "access_logs": {
+                                "__end_line__": 99,
+                                "__start_line__": 97,
+                                "bucket": [
+                                    "tm-access-logs-prod"
+                                ],
+                                "__address__": "module.claims_platform.aws_s3_bucket.access_logs",
+                                "__provider_address__": "aws.default"
+                            }
+                        }
+                    },
+                    "evaluated_keys": [
+                        "resource_type",
+                        "rule/*/status",
+                        "replication_configuration/rules/*/status"
+                    ]
+                },
+                "code_block": [
+                    [
+                        97,
+                        "resource \"aws_s3_bucket\" \"access_logs\" {\n"
+                    ],
+                    [
+                        98,
+                        "  bucket = \"tm-access-logs-${var.environment}\"\n"
+                    ],
+                    [
+                        99,
+                        "}\n"
+                    ]
+                ],
+                "file_path": "/../../modules/claims-platform/main.tf",
+                "file_abs_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "repo_file_path": "/terraform/modules/claims-platform/main.tf",
+                "file_line_range": [
+                    97,
+                    99
+                ],
+                "resource": "module.claims_platform.aws_s3_bucket.access_logs",
+                "evaluations": null,
+                "check_class": "checkov.common.graph.checks_infra.base_check",
+                "fixed_definition": null,
+                "entity_tags": null,
+                "caller_file_path": null,
+                "caller_file_line_range": null,
+                "resource_address": null,
+                "severity": null,
+                "bc_category": null,
+                "benchmarks": null,
+                "description": null,
+                "short_description": null,
+                "vulnerability_details": null,
+                "connected_node": null,
+                "guideline": "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-general-policies/ensure-that-s3-bucket-has-cross-region-replication-enabled",
+                "details": [],
+                "check_len": null,
+                "definition_context_file_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "breadcrumbs": {
+                    "bucket": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "environment",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "source_module_": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "idx": 0,
+                            "source_module_object": null
+                        }
+                    ]
+                }
+            },
+            {
+                "check_id": "CKV_AWS_144",
+                "bc_check_id": "BC_AWS_GENERAL_72",
+                "check_name": "Ensure that S3 bucket has cross-region replication enabled",
+                "check_result": {
+                    "result": "FAILED",
+                    "entity": {
+                        "aws_s3_bucket": {
+                            "claims_documents": {
+                                "__end_line__": 134,
+                                "__start_line__": 127,
+                                "bucket": [
+                                    "tm-claims-documents-prod"
+                                ],
+                                "tags": [
+                                    {
+                                        "DataClass": "confidential",
+                                        "Environment": "prod"
+                                    }
+                                ],
+                                "__address__": "module.claims_platform.aws_s3_bucket.claims_documents",
+                                "__provider_address__": "aws.default"
+                            }
+                        }
+                    },
+                    "evaluated_keys": [
+                        "resource_type",
+                        "rule/*/status",
+                        "replication_configuration/rules/*/status"
+                    ]
+                },
+                "code_block": [
+                    [
+                        127,
+                        "resource \"aws_s3_bucket\" \"claims_documents\" {\n"
+                    ],
+                    [
+                        128,
+                        "  bucket = \"tm-claims-documents-${var.environment}\"\n"
+                    ],
+                    [
+                        129,
+                        "\n"
+                    ],
+                    [
+                        130,
+                        "  tags = {\n"
+                    ],
+                    [
+                        131,
+                        "    Environment = var.environment\n"
+                    ],
+                    [
+                        132,
+                        "    DataClass   = \"confidential\"\n"
+                    ],
+                    [
+                        133,
+                        "  }\n"
+                    ],
+                    [
+                        134,
+                        "}\n"
+                    ]
+                ],
+                "file_path": "/../../modules/claims-platform/main.tf",
+                "file_abs_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "repo_file_path": "/terraform/modules/claims-platform/main.tf",
+                "file_line_range": [
+                    127,
+                    134
+                ],
+                "resource": "module.claims_platform.aws_s3_bucket.claims_documents",
+                "evaluations": null,
+                "check_class": "checkov.common.graph.checks_infra.base_check",
+                "fixed_definition": null,
+                "entity_tags": {
+                    "DataClass": "confidential",
+                    "Environment": "prod"
+                },
+                "caller_file_path": null,
+                "caller_file_line_range": null,
+                "resource_address": null,
+                "severity": null,
+                "bc_category": null,
+                "benchmarks": null,
+                "description": null,
+                "short_description": null,
+                "vulnerability_details": null,
+                "connected_node": null,
+                "guideline": "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-general-policies/ensure-that-s3-bucket-has-cross-region-replication-enabled",
+                "details": [],
+                "check_len": null,
+                "definition_context_file_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                "breadcrumbs": {
+                    "tags.Environment": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "environment",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "bucket": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "environment",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "source_module_": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "idx": 0,
+                            "source_module_object": null
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "summary": {
+        "passed": 63,
+        "failed": 9,
+        "skipped": 0,
+        "parsing_errors": 0,
+        "resource_count": 14,
+        "checkov_version": "3.3.16"
+    }
+}
