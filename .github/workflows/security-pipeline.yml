@@ -21,11 +21,16 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "Environment to plan against"
+        description: "Environment to deploy"
         required: true
         default: dev
         type: choice
         options: [dev, stage, prod]
+      deploy:
+        description: "Apply, not just scan"
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -217,12 +222,16 @@ jobs:
     name: Deploy (${{ matrix.environment }})
     runs-on: [self-hosted, "${{ matrix.environment }}"]
     needs: [secret-scan, iac-scan]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # push to main deploys every environment; a manual run deploys just the one
+    # you pick, which is what makes a live single-environment demo clean.
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.deploy)
     strategy:
       fail-fast: false
       max-parallel: 1        # dev, then stage, then prod
       matrix:
-        environment: [dev, stage, prod]
+        environment: ${{ github.event_name == 'workflow_dispatch' && fromJSON(format('["{0}"]', inputs.environment)) || fromJSON('["dev","stage","prod"]') }}
     environment: ${{ matrix.environment }}
     steps:
       - uses: actions/checkout@v4
