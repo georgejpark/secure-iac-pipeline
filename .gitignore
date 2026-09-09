@@ -1,0 +1,24 @@
+# The first commit of every repository should contain this file.
+# Everything in the demo exists because this file did not.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!*.pub
+*.p12
+*.pfx
+credentials
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+crash.log
+checkov-report/
+results.sarif
+triage-comment.md
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.DS_Store

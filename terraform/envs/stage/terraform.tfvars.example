@@ -1,0 +1,3 @@
+# Copy to terraform.tfvars and fill in for the stage account.
+vpc_id              = "vpc-REPLACE_ME"
+monitoring_role_arn = "arn:aws:iam::000000000000:role/rds-monitoring-stage"
