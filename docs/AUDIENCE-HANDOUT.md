@@ -1,340 +1,460 @@
-# Secrets don't leave git
+# A change, from my laptop to production
 
-### A security pipeline for infrastructure as code
-
-**George Park** · Senior DevSecOps Engineer candidate · Texas Mutual · September 2026
-
-> **What you're about to see.** A working pipeline that blocks two kinds of change from
-> reaching an environment: leaked credentials, and insecure infrastructure. Everything in this
-> document was produced by running it — no figure here is an estimate.
->
-> Repository: **github.com/georgejpark/secure-iac-pipeline**
+Follow along. Every command here is one I actually run.
 
 ---
 
-## 1. The problem, in one page
+## What we're going to do
 
-While inventorying a platform's repositories ahead of a migration, a routine check turned up
-credential material committed to source control:
+Production is running out of memory during month-end close.
 
-| | |
-|---|---|
-| Private keys committed to one repository | **112** |
-| Distinct keys among them | 104 |
-| Certificates still valid | 98 |
-| **Production hostnames affected** | **21** |
-| Months exposed before anyone noticed | **9** |
-| Private keys in the repository's *first* commit | **63** |
+I'm going to give it more. Two gigabytes becomes three.
 
-**It was not carelessness.** The repository's setup scripts created Kubernetes TLS secrets by
-reading private keys directly out of the checked-out working tree:
+That's the whole change. Watching it travel is the point.
 
-```bash
-kubectl create secret tls my-app-tls \
-  --cert="$repo/config/my-app/prod/certs/host.fullchain.pem" \
-  --key="$repo/config/my-app/prod/certs/host.key.pem"
-```
-
-For that command to work from a clone, the key has to *be* in the clone. Onboarding a service
-**required** committing its private key. The exposure was not a mistake in the process — it was the
-process.
-
-Sixteen commits added key material over nine months. Every one passed code review, with messages as
-ordinary as *"Add TLS certs for reporting-ui (dev/uat/stage/prod)"*.
 
 ---
 
-## 2. Why the obvious fix doesn't work
+# The tools, in one line each
 
-A second repository had a `.env` with 74 credentials. The team **noticed and responded** — the very
-next commit was titled *"Add utility for encrypting/decrypting .env files."*
+**gitleaks**
 
-They added encryption. They gitignored the file. They deleted it. By every code-review standard the
-repository then looked correct.
+Searches your code for passwords, API keys and private keys that shouldn't be there.
 
-The plaintext was still one command away:
+It knows what secrets look like. An AWS key has a shape. So does a GitHub token. It reads every file
+and every past commit looking for those shapes.
 
-```
-$ git show <commit>:.env
-DATABASE_URL=postgresql://claims_app:...@db.internal:5432/claims
-AWS_SECRET_ACCESS_KEY=...
-JWT_SIGNING_KEY=...
-```
-
-**Deleting a file from git does not remove it.** It unlinks it from the tip of the branch. The blob
-stays in the object store and travels with every clone, every fork, and every CI cache.
-
-### What actually works — and the order matters more than the steps
-
-| | Action | Time | Effect |
-|---|---|---|---|
-| **1** | **Rotate the credential** | minutes | The only step that reduces risk *today* |
-| **2** | Rewrite history (`git filter-repo`), force-push, garbage collect | days | Must reach every fork, PR ref and existing clone |
-
-Most people do these in the opposite order, because rewriting history feels like the real fix. While
-that coordination happens, the credential is still live.
+If it finds one, it stops the build.
 
 ---
 
-## 3. The pipeline
+**terraform fmt**
 
-![Pipeline control flow](img/pipeline-flow.png)
+Tidies up the formatting of Terraform files. Spacing, indentation, alignment.
 
-Four gates, ordered by cost. The earlier a finding is caught, the cheaper it is to fix.
+It doesn't change what the code does. It just makes every file look the same.
 
-| Gate | Tool | Catches | Blocks? |
-|---|---|---|---|
-| **0** | pre-commit + gitleaks | Secrets, before a commit exists | locally |
-| **1** | gitleaks in CI (`fetch-depth: 0`) | Secrets anywhere in **history** | yes |
-| **2** | Checkov | Insecure Terraform | on the blocking list only |
-| **3** | AI triage | Explains, orders, flags false positives | reports only |
-| **4** | Deploy policy gate | Proxmox deploy safety | yes |
+Why bother? Because when everyone formats differently, code reviews fill up with arguments about
+spacing instead of the actual change.
 
-### One line that decides whether gate 1 works at all
+`terraform fmt --check` fails the build if a file is untidy.
+
+---
+
+**terraform validate**
+
+Checks the Terraform is valid before anyone tries to run it.
+
+Missing brackets. A variable that doesn't exist. A typo in a resource name.
+
+It catches mistakes in seconds instead of halfway through creating things.
+
+---
+
+**Checkov**
+
+Reads Terraform and looks for unsafe settings.
+
+A storage bucket anyone can read. A database with no encryption. SSH open to the internet.
+
+It knows about a thousand of these patterns. I've picked which ones stop a merge.
+
+---
+
+**SOPS**
+
+Encrypts passwords so they can be kept in the repository safely.
+
+The file is committed. Anyone can see it. But the values are scrambled, and only the machine with the
+right key can unscramble them.
+
+---
+
+**Terraform**
+
+Creates the machines.
+
+You describe what you want in a file. It works out what to create, change or delete.
+
+---
+
+**Ansible**
+
+Installs software onto machines that already exist.
+
+Terraform makes the box. Ansible puts the application on it.
+
+---
+
+# STEP 1. Get the code
+
+I work on the Proxmox host, because that's where everything lives.
+
+```
+ssh root@192.168.1.132
+cd /root/secure-iac-pipeline
+git pull
+```
+
+---
+
+# STEP 2. Make a branch
+
+Never work on `main`. Ever.
+
+```
+git checkout -b demo/TM-104-increase-prod-memory
+```
+
+The branch name says what it's for. Anyone can read it later.
+
+---
+
+# STEP 3. Change one number
+
+Open the production file:
+
+```
+terraform/deploy/prod/main.tf
+```
+
+Find this:
+
+```
+module "workload" {
+  source = "../../modules/workload"
+
+  environment   = "prod"
+  replica_count = 2
+  cores         = 2
+  memory_mb     = 2048     <-- change this
+}
+```
+
+Change `2048` to `3072`.
+
+That's it. One number.
+
+**Why this is the only place I change it:** development and staging have their own files. They aren't
+affected. I can't accidentally resize the wrong environment.
+
+---
+
+# STEP 4. Commit it
+
+```
+git add -A
+git commit -m "TM-104: raise production memory to 3 GB"
+```
+
+**Something happens before the commit is saved.**
+
+A hook runs. It checks for passwords and API keys in what I'm committing.
+
+If it finds one, the commit doesn't happen.
+
+```
+Detect hardcoded secrets....................Passed
+Terraform fmt...............................Passed
+Terraform validate..........................Passed
+```
+
+This is the cheapest place to catch a mistake. Nothing has left my machine yet.
+
+---
+
+# STEP 5. Push and open a pull request
+
+```
+git push -u origin demo/TM-104-increase-prod-memory
+gh pr create --base main --title "TM-104: raise production memory to 3 GB"
+```
+
+Opening the pull request is what starts everything else.
+
+---
+
+# STEP 6. The pipeline starts
+
+A file in the repository tells GitHub what to do. It lives here:
+
+```
+.github/workflows/security-pipeline.yml
+```
+
+It runs four jobs, in order. Nothing is skipped.
+
+---
+
+## Job 1. Look for secrets
 
 ```yaml
 - uses: actions/checkout@v4
   with:
-    fetch-depth: 0        # not optional
+    fetch-depth: 0
+
+- run: gitleaks detect --source . --exit-code 1
 ```
 
-GitHub's default checkout fetches **one commit**. A secret committed earlier and deleted later — the
-case that actually matters — is invisible without this. It is the most common reason a secret
-scanning pipeline silently does nothing.
+**That `fetch-depth: 0` line matters more than it looks.**
+
+By default GitHub only downloads the newest commit. So if somebody committed a password last year and
+deleted it, a scan finds nothing.
+
+`fetch-depth: 0` downloads the whole history. Every commit ever made.
+
+If it finds anything, the pull request stops here.
 
 ---
 
-## 4. The number worth discussing
+## Job 2. Check the infrastructure code
 
-Checkov reports **24 findings against 110 lines of Terraform.**
+This is Checkov. It reads Terraform and looks for unsafe settings.
 
-That ratio is the real engineering problem. A tool reporting 24 issues on a small file gets muted
-within a week — and once a team ignores the tool, they ignore the finding that mattered too.
-
-| Tier | Count | Meaning |
-|---|---|---|
-| **Blocking** | 10 | Each is a plausible incident report on its own |
-| **Promotion-gated** | 4 | Blocking in stage and prod, advisory in dev |
-| **Advisory** | 5 | Real, but cost and retention *decisions* |
-| **Reported** | 5 | Visible, not enforced |
-
-### One finding deliberately **not** blocking
-
-```python
-"CKV_AWS_23": "security group rule has no description — hygiene, not a vulnerability"
+```yaml
+- run: checkov -d terraform/envs/${{ matrix.environment }} --output json
 ```
 
-It is untidy. It is not unsafe. Blocking a merge over a missing description teaches a team that the
-security pipeline is an obstacle — and spends the credibility needed for *"this bucket is readable by
-the entire internet."*
+It runs **three times**. Once for development, once for staging, once for production.
 
-### Three documented false positives
+Same code. Different rules.
 
-`CKV_AWS_111`, `CKV_AWS_356`, `CKV_AWS_109` fire on the KMS key policy. Checkov is technically right
-and practically wrong: it is AWS's own documented default key policy, and removing it makes the key
-unrecoverable. Suppressed **in code with the reason attached** — never in a central ignore file where
-the next engineer will not find it.
+- Development blocks **10** things
+- Staging blocks **14**
+- Production blocks **14**
+
+The extra four are things development is allowed to skip. Losing a development box costs an
+afternoon. Losing production costs a phone call from a regulator.
+
+**Some examples of what it blocks:**
+
+- A storage bucket anyone on the internet can read
+- SSH open to the whole world
+- A database with no encryption
+- A database reachable from the internet
 
 ---
 
-## 5. Where the AI sits — and where it does not
+## Job 3. Explain the findings
 
-| Deterministic | The model |
-|---|---|
-| Checkov detection | Orders the findings |
-| The blocking list (version-controlled) | Writes the explanation |
-| The pass/fail gate | Flags likely false positives |
+Checkov reports 24 findings against 110 lines of Terraform.
 
-**With no API key, the gate behaves identically** — same exit code, same blocking list, plainer
-wording. If a language model decides whether a merge is safe, an API outage becomes a security bypass.
+Nobody reads 24 findings. They mute the tool instead.
 
----
+So a script sorts them:
 
-## 6. Where it runs
+- **10 stop the merge.** Each one could be an incident.
+- **5 are advice.** Real, but they're cost decisions, not security holes.
+- **9 are noted.** Visible, not enforced.
 
-![System architecture](img/system-architecture.png)
+Then it writes a comment on the pull request in plain English.
 
-CI does not run on GitHub-hosted runners. It runs on three self-hosted runners on a Proxmox host,
-**one per environment**, each in an unprivileged container on its own isolated network segment.
+**One thing I want to be clear about:** the AI writes the explanation. It does not decide.
 
-### Why three runners rather than one
-
-With a shared runner, a pull request touching **dev** executes arbitrary code on the same machine
-that later deploys **production**. A compromised dev change can leave something behind for the prod
-job, or read the credentials that job obtains. That is a **privilege escalation path from dev to
-prod**.
-
-### Three isolation boundaries, not one
-
-| Boundary | Control | Proven by |
-|---|---|---|
-| **Network** | No route between environment segments | `dev → prod` blocked on ICMP and TCP |
-| **Cryptographic** | One age key per environment, private key only on its own runner | dev and stage cannot decrypt prod secrets |
-| **Database** | `pg_hba` restricts each role to its own subnet | dev runner refused **even holding the correct prod password** |
-
-That last row is the one worth pausing on: a leaked credential alone is not enough.
+The list of what blocks is a hardcoded list in the repository that people review. If the AI service is
+down, the pipeline works exactly the same. It just explains itself less well.
 
 ---
 
-## 7. State and secrets, without a cloud account
+## Job 4. Stop the merge if anything is wrong
 
-| Concern | Solution | Why |
-|---|---|---|
-| **Terraform state** | PostgreSQL `pg` backend, one database per environment | Advisory locks give real state locking — what S3 + DynamoDB buys on AWS |
-| **Secrets** | SOPS with one age key per environment | Encrypted files are committed deliberately; only the matching runner can open them |
-| **Cloud auth** | GitHub OIDC federation | No long-lived credential exists to steal |
-
-`encrypted_regex` encrypts **values only**, so a reviewer can see *which* secret changed in a diff
-without seeing what it changed to.
-
----
-
-## 8. Verified results
-
-Reproduce with `make scan`, `make scan-insecure`.
-
-**Clean configuration passes:**
+The pull request now says:
 
 ```
-dev     0 blocking   10 advisory   exit 0
-stage   0 blocking    8 advisory   exit 0
-prod    0 blocking    8 advisory   exit 0
-```
-
-**The same insecure Terraform, blocked harder on promotion:**
-
-```
-dev     exit 1   10 blocking
-stage   exit 1   14 blocking
-prod    exit 1   14 blocking
-```
-
-The extra four are controls dev is allowed to skip. Dev *should* be cheaper — losing a dev database
-costs an afternoon. A pipeline pretending every environment is identical is one people route around.
-
-**Real infrastructure, deployed by the pipeline:**
-
-```
-301  app-dev-1
-311  app-stage-1
-321  app-prod-1
-322  app-prod-2      ← two replicas, delete protection, boot persistence
+BLOCKED - Review required
 ```
 
 ---
 
+# STEP 7. Somebody has to approve it
 
-## What is actually running
-
-**Say what this is, precisely.** Terraform provisions **LXC containers** on a Proxmox host. Ansible
-installs a small **Python HTTP service** into them under systemd. There is **no Docker, no Kubernetes
-and no FastAPI** in this stack.
+I cannot approve my own pull request. GitHub refuses:
 
 ```
-app-dev-1    10.10.10.20:8080   {"status":"ok"}  {"version":"1.0.0"}
-app-stage-1  10.20.10.20:8080   {"status":"ok"}  {"version":"1.0.0"}
-app-prod-1   10.30.10.20:8080   {"status":"ok"}  {"version":"1.0.0"}
-app-prod-2   10.30.10.21:8080   {"status":"ok"}  {"version":"1.0.0"}
+Can not approve your own pull request
 ```
 
-Production runs two containers because production specifies two.
+That's not a setting I chose. GitHub won't allow it.
 
-### Terraform provisions the machine; Ansible installs the application
+Somebody else has to read the change and approve it.
 
-Keeping those separate is deliberate — rebuilding a container should not mean redeploying the app,
-and redeploying the app should not mean touching infrastructure.
+**This is what the rule looks like:**
 
-The Ansible role uses a release directory with a symlink:
+- 1 approval required
+- 4 checks must pass
+- No force-pushing
+- Stale approvals are dismissed if I push again
+
+---
+
+# STEP 8. Merge
+
+Once approved:
 
 ```
-/opt/rapta/inspection/releases/1.0.0/
-/opt/rapta/inspection/current -> releases/1.0.0
+gh pr merge --squash --delete-branch
 ```
 
-**Rollback is a symlink flip, not a redeploy.**
-
-### The healthcheck asserts the version, not just liveness
-
-A deploy that silently left the old code running **fails** rather than reporting success. That is the
-same principle as everything else here: a control that passes while doing nothing is worse than no
-control, because it manufactures confidence.
-
-
-## Deployment approval
-
-| Environment | Gate |
-|---|---|
-| `dev` | applies automatically on merge |
-| `stage` | **waits for a named reviewer** |
-| `prod` | **waits for a named reviewer** |
-
-Configured as GitHub Environment protection rules. Verified end to end: the run pauses, the approver
-is notified, and the deploy only proceeds once approved.
-
-Note a GitHub constraint worth knowing: **you cannot approve your own pull request.** Environment
-approvals are different and do permit self-approval, which is why the promotion gate sits there
-rather than on the PR.
+Merging is what authorises a deployment. Nothing deploys before this.
 
 ---
 
-## 9. Benefits
+# STEP 9. Development deploys by itself
 
-| Benefit | Why it matters |
-|---|---|
-| Detection moves left | A secret caught pre-commit costs nothing; caught after push it costs a rotation, a history rewrite across every fork, and an incident |
-| The security decision is explicit | Ten blocking policies in version control, each justified — reviewable by an engineer or an auditor |
-| Noise is managed, not ignored | 24 findings sorted into four tiers, with one deliberately un-blocked |
-| Environments get proportionate rigour | Dev moves fast, prod does not, one pipeline |
-| No standing cloud credentials | Nothing static to steal, nothing to rotate on a schedule |
-| Blast radius is contained | Three independent isolation boundaries, each verified |
-| It degrades safely | No API key, runner down — the gate still works |
+The moment the merge lands, development starts deploying.
+
+No approval. No waiting.
+
+Here's what happens inside that job:
+
+**1. Decrypt the passwords**
+
+```
+sops --decrypt terraform/envs/dev/secrets.enc.yaml
+```
+
+The encrypted file is in the repository. That's on purpose.
+
+The key that opens it exists on **one machine only**. the development runner.
+
+The production runner cannot open the development file. The development runner cannot open the
+production file. I've tested both directions.
+
+**2. Get the current state**
+
+```
+terraform init -backend-config="conn_str=postgres://...@10.40.10.10/tfstate_dev"
+```
+
+Each environment has its own database. Development cannot see production's records. I tested that
+with the correct production password and it was still refused, because the request came from the
+wrong network.
+
+**3. Work out what will change**
+
+```
+terraform plan -out=tfplan
+```
+
+**4. Check the plan before running it**
+
+```
+python3 scripts/policy_check.py --plan plan.json --environment dev
+```
+
+This one I wrote myself. Checkov has no rules for Proxmox, so this code would pass every scan just by
+being unrecognised. That's the worst kind of pass.
+
+It checks four things:
+
+- The container must be unprivileged (always)
+- It must restart after a reboot (staging and production only)
+- It must have delete protection (production only)
+
+**5. Apply it**
+
+```
+terraform apply tfplan
+```
+
+The container is resized.
 
 ---
 
-## 10. Honest trade-offs
+# STEP 10. Staging waits for a person
 
-Stated because the strengths are only believable alongside the costs.
+Staging does not deploy automatically.
 
-| | Pro | Con |
-|---|---|---|
-| **Pipeline** | Catches secrets and IaC flaws before deployment | Pre-deployment only — nothing about runtime, drift, containers or dependencies |
-| | Short, defensible blocking list keeps the tool credible | The list is a judgment call, tuned for regulated data, and needs negotiating locally |
-| | ~1 minute per pull request | Still a minute, on every PR, forever |
-| **AI triage** | Turns 24 raw findings into a ranked plain-English comment | Costs money per run and adds a dependency |
-| | Cannot affect pass/fail, so an outage is not a bypass | Which also caps how much value it can add |
-| **Self-hosted runners** | Data residency and auditability | You now own machines: patching, disk, uptime |
-| | Isolation removes the dev→prod escalation path | Three runners is three times the maintenance of one |
-| | No inbound exposure | A runner outage blocks CI until you fail back to hosted |
+GitHub shows:
 
-**The honest summary.** The biggest risk here is not technical. It is that the blocking list loses
-credibility and people route around it. That is why the list is short, why every entry is justified
-in writing, and why dev is allowed to be cheaper than prod.
+```
+Deploy (stage) - Waiting for review
+```
+
+Somebody has to click Approve.
+
+Then it runs the same five steps, against staging's own key, staging's own database, staging's own
+network.
 
 ---
 
-## 11. What this deliberately does not do
+# STEP 11. Production waits too
 
-| Not covered | Where it would go |
-|---|---|
-| Container image scanning | Trivy or Grype as another gate, same pattern |
-| Dependency / SCA scanning | Dependabot plus `pip-audit` |
-| Runtime and cloud posture | AWS Config, Security Hub, or a CSPM |
-| Custom organisational policy | OPA/Rego, or Checkov custom policies |
-| Drift detection | Scheduled `terraform plan`, alert on a non-empty diff |
+Same again.
 
----
+```
+Deploy (prod) - Waiting for review
+```
 
-## 12. Three things to take away
+Somebody clicks Approve. Then production gets its extra memory.
 
-1. **Deleting a secret from git does not remove it.** The fix that feels thorough leaves you exposed
-   while looking handled. Rotate first, rewrite second.
+Production has one more rule the others don't: **delete protection**.
 
-2. **When something is wrong for nine months and nobody catches it, the system made the wrong thing
-   easy.** Fix what is easy, not the people.
-
-3. **The hard part is not running the scanner. It is deciding what is worth blocking** — and being
-   able to defend that list to an engineer and to an auditor.
+I tried to destroy production with Terraform earlier. It refused. You have to turn that protection off
+deliberately first. That's the point of it.
 
 ---
 
-*Questions welcome at any point.*
+# What's running when this finishes
+
+Four Linux containers on one server.
+
+- One for development
+- One for staging
+- Two for production, because production runs two
+
+Ask any of them who they are:
+
+```
+curl http://10.30.10.20:8080/
+```
+
+```json
+{
+  "message": "Hello World, Hello Guys This is George and nice to meet you",
+  "environment": "prod",
+  "host": "app-prod-1",
+  "version": "1.1.0"
+}
+```
+
+---
+
+# Two things worth knowing
+
+## They can't talk to each other
+
+Each environment is on its own network.
+
+Development cannot reach production. Production cannot reach development. I tested both directions and
+both are blocked.
+
+So if somebody breaks into development, they've reached development. Nothing else.
+
+## Rolling back is fast
+
+The application lives in a folder named after its version:
+
+```
+releases/1.0.0
+releases/1.1.0
+current -> releases/1.1.0
+```
+
+To roll back, point `current` at the old folder and restart. Takes seconds. The old version never left
+the disk.
+
+---
+
+# What I'd change if I had longer
+
+**No container images yet.** Right now Ansible installs Python onto a running machine. Two machines can
+drift apart. A container image can't. That's the next thing I'd do, and it would let me scan for known
+vulnerabilities before anything runs.
+
+**No Kubernetes.** For four containers on one server, it would cost more to run than it saves. If you
+already run Kubernetes, the same checks sit in front of your manifests instead of my Terraform. Only
+the last command changes.
+
+**One person is a single point of failure.** I'm the only account on this repository, so I can't
+approve my own work. In a real team that's a second engineer. It's the one gap I can't close on my own.
