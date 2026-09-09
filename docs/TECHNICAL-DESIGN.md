@@ -150,6 +150,75 @@ reviewer on a GitHub Environment. Authentication is OIDC federation; see §6.
 
 ---
 
+## 3a. Where it actually runs
+
+![Figure 2](img/system-architecture.png)
+
+**Figure 2 — System architecture.**
+
+CI does not run on GitHub-hosted runners. It runs on three self-hosted runners on a Proxmox host
+(`pve2`, 104 vCPU, 62 GB, Debian 13), one per environment, each in its own unprivileged LXC container
+on its own isolated network segment.
+
+| | dev | stage | prod |
+|---|---|---|---|
+| Container | `ci-dev` (201) | `ci-stage` (202) | `ci-prod` (203) |
+| Bridge | `vmbr1` | `vmbr2` | `vmbr3` |
+| Subnet | `10.10.10.0/24` | `10.20.10.0/24` | `10.30.10.0/24` |
+| Runner labels | `self-hosted, dev` | `self-hosted, stage` | `self-hosted, prod` |
+| Resources | 4 vCPU / 4 GB | 4 vCPU / 4 GB | 4 vCPU / 4 GB |
+
+### Why three runners rather than one
+
+This is the part worth defending in a design review.
+
+With a single shared runner, a pull request touching **dev** executes arbitrary code on the same
+machine that later deploys **production**. A malicious or merely compromised dev change can leave
+something behind that fires during the prod job, or read credentials that job obtains. That is a
+**privilege escalation path from dev to prod**, and it is the main reason GitHub advises against
+sharing self-hosted runners across trust levels.
+
+Three runners remove it. The prod runner only ever executes prod jobs and is the only one entitled to
+the prod role. Secret scanning runs on the **dev** runner deliberately — it only reads source and
+needs no cloud access, so it is given none.
+
+### The isolation is real, and it was tested
+
+Each segment is an internal bridge with no physical port. The host provides NAT egress so runners can
+reach GitHub, and a forwarding policy (`runner-net.service`) drops every cross-segment path:
+
+```
+-A RUNNER_NAT -s 10.10.10.0/24 -o vmbr0 -j MASQUERADE
+-A RUNNER_FWD -s 10.10.10.0/24 -d 10.30.10.0/24 -j DROP
+-A RUNNER_FWD -s 10.20.10.0/24 -d 10.30.10.0/24 -j DROP
+-A RUNNER_FWD -s 10.30.10.0/24 -d 10.10.10.0/24 -j DROP
+```
+
+Verified in both directions:
+
+```
+dev  -> prod  ICMP     BLOCKED
+dev  -> prod  tcp/22   BLOCKED
+stage-> prod  ICMP     BLOCKED
+prod -> dev   ICMP     BLOCKED
+each -> api.github.com HTTP 200
+```
+
+### No inbound port is open
+
+The runners **poll GitHub outbound**; GitHub never connects in. There is no port forward, no exposed
+service, and no inbound firewall exception. That property is what makes self-hosting CI acceptable
+without putting a listener on the public internet.
+
+### Why self-host at all
+
+For a regulated insurer this is not a cost decision. It is data residency and auditability: being
+able to answer "where was this code built, on whose hardware, and who could reach that machine" with
+something more specific than "a shared cloud runner". The gates are identical either way — only the
+execution location changes, which is a one-line `runs-on` difference.
+
+---
+
 ## 4. Environment model
 
 Three environments, one module. The environments differ only in the variables they pass, so they
