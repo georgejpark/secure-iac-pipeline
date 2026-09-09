@@ -515,6 +515,87 @@ ssh root@192.168.1.132 "pct list | grep app-"
 
 ---
 
+## STEP 14d — Deploy production, live (3 min)
+
+**The best moment in the technical half. dev and stage are already running; production is not.**
+
+### [SAY]
+
+> "So far everything I've shown you already exists. Let me actually deploy production, now, while
+> you watch."
+
+### [RUN] — from the Proxmox host
+
+```bash
+ssh root@192.168.1.132
+cd /root/secure-iac-pipeline
+gh workflow run "Security Pipeline" --ref main -f environment=prod -f deploy=true
+```
+
+### [SAY] while it starts
+
+> "That's a manual run targeting one environment. On a merge to main it deploys all three; here I'm
+> asking for production only.
+>
+> Watch the order it does things. Secrets first — full history. Then the IaC scan for all three
+> environments. Only then does it touch production. And the deploy job itself decrypts the
+> credentials with the age key that exists only on the production runner, gets its state from the
+> production database, runs the policy gate against the plan, and only then applies."
+
+### [SHOW] the Actions tab, then:
+
+```bash
+gh run watch $(gh run list --limit 1 --json databaseId -q '.[0].databaseId')
+```
+
+### [EXPECT] — about 90 seconds end to end
+
+```
+✓ Secrets        15s
+✓ IaC (dev)      53s
+✓ IaC (stage)    53s
+✓ IaC (prod)     53s
+✓ Deploy (prod)  14s
+```
+
+Note aloud that **only Deploy (prod) ran** — not dev, not stage.
+
+### [RUN] — the payoff
+
+```bash
+pct list | grep app-
+```
+
+### [EXPECT]
+
+```
+301  app-dev-1
+311  app-stage-1
+321  app-prod-1     <- did not exist ninety seconds ago
+322  app-prod-2
+```
+
+### [SAY]
+
+> "Two replicas, because production specifies two. Both unprivileged, both with the firewall on, both
+> set to restart after a host reboot, both with delete protection — because the policy requires all
+> four in production, and the gate checked the plan before any of it was created.
+>
+> And that delete protection isn't decorative. I tried to tear this down with `terraform destroy`
+> earlier and Proxmox refused outright — you have to consciously lift the protection first. Which is
+> the point of it."
+
+### If it fails live
+
+Do not debug it. Say: *"That's what the gate is for — let me show you what it caught,"* read the
+error, and move on to Step 15. A pipeline that stops a bad deploy in front of an audience is a better
+advert than one that succeeds quietly.
+
+**Fallback if GitHub is unreachable:** run it directly on the prod runner —
+`pct exec 203 -- su - runner -c '...terraform apply'` — but the pipeline version is the story.
+
+---
+
 ## STEP 15 — No stored credentials (2 min)
 
 ### [SAY]
