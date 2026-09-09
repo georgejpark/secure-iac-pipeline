@@ -44,7 +44,9 @@ jobs:
   # ===========================================================================
   secret-scan:
     name: Secrets
-    runs-on: ubuntu-latest
+    # Runs on the LOWEST-trust runner. Secret scanning only ever reads source;
+    # it needs no cloud access, so it has none.
+    runs-on: [self-hosted, dev]
     permissions:
       contents: read
       security-events: write
@@ -66,13 +68,8 @@ jobs:
       # A scanner that reports a pass while scanning nothing is worse than no
       # scanner, because it manufactures confidence. So: pin the version, scan
       # the whole repository every time, and let it be slightly slower.
-      - name: Install gitleaks
-        run: |
-          VERSION=8.30.1
-          curl -sSfL \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
-            | tar -xz -C /usr/local/bin gitleaks
-          gitleaks version
+      - name: Confirm the pinned gitleaks is present
+        run: gitleaks version
 
       - name: Scan the entire repository history
         run: |
@@ -98,7 +95,11 @@ jobs:
   # ===========================================================================
   iac-scan:
     name: IaC (${{ matrix.environment }})
-    runs-on: ubuntu-latest
+    # Each environment is scanned on its OWN runner, in its own container.
+    # A pull request touching dev never executes on the machine that deploys
+    # production -- that is the isolation boundary, and it is why there are
+    # three runners rather than one.
+    runs-on: [self-hosted, "${{ matrix.environment }}"]
     needs: secret-scan
     permissions:
       contents: read
@@ -111,18 +112,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Install tooling
+      # No setup-python / setup-terraform here. The runner image already has
+      # pinned Terraform and gitleaks, so a build cannot silently pick up a
+      # different toolchain version than the one that was reviewed.
+      #
+      # Debian 13 marks the system Python as externally managed (PEP 668), so
+      # pip refuses to install into it. A venv is the correct answer -- never
+      # --break-system-packages, which is how a runner's Python slowly rots.
+      - name: Python tooling (venv)
         run: |
-          python -m pip install --quiet --upgrade pip
-          python -m pip install --quiet checkov anthropic
+          python3 -m venv .ci-venv
+          ./.ci-venv/bin/pip install --quiet --upgrade pip
+          ./.ci-venv/bin/pip install --quiet checkov anthropic
+          echo "$PWD/.ci-venv/bin" >> "$GITHUB_PATH"
 
       - name: Terraform format
         run: terraform fmt -check -recursive terraform/
@@ -186,7 +188,7 @@ jobs:
   # ===========================================================================
   plan:
     name: Plan (${{ matrix.environment }})
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, "${{ matrix.environment }}"]
     needs: [secret-scan, iac-scan]
     if: github.event_name == 'pull_request'
     permissions:
@@ -201,9 +203,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
 
       # No access key, no secret key, nothing long-lived. GitHub presents a
       # signed OIDC token; the AWS role's trust policy accepts it only for this
@@ -228,7 +227,7 @@ jobs:
   # ===========================================================================
   apply-dev:
     name: Apply (dev)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, dev]
     needs: [secret-scan, iac-scan]
     # Only runs when an AWS role has actually been configured on the
     # environment. Without it the job is skipped rather than failing, so the
@@ -243,9 +242,6 @@ jobs:
     environment: dev
     steps:
       - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
       - name: Assume AWS role via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
