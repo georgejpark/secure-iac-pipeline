@@ -28,17 +28,18 @@ Read this top to bottom. It runs in the order the interview runs.
 - [ ] Do Not Disturb on. Slack and Mail closed.
 - [ ] **This document open on a second screen or printed** — never on the screen you share
 
-**If the demo script is missing:** macOS endpoint protection quarantined an earlier version of it
-because it generated `AKIA`-prefixed strings — indistinguishable from credential harvesting to a
-heuristic scanner. The committed version uses a synthetic `EXAMPLEKEY` prefix and is not flagged. A
-copy also lives on the Proxmox host as a fallback:
+**The secret-persistence demo runs from the Proxmox host.** macOS endpoint protection quarantined
+the local copy twice — it sees a script writing AWS credential names into a `.env` and treats that as
+credential harvesting. Both times it deleted the file, and once a `git add -A` then committed the
+deletion.
 
 ```bash
 ssh root@192.168.1.132 /root/demo-secret-persistence.sh
 ```
 
-*(This is worth telling them if it comes up — a security demo blocked by a security control, and the
-reason is a false positive. It is the same theme as the rest of the talk.)*
+*(Worth telling them if it comes up: a security demo blocked by a security control, over a false
+positive. Same theme as the rest of the talk — and it happened twice, which is the more honest
+version of the story.)*
 
 **If a runner is offline:** do not debug it live. Edit `runs-on:` to `ubuntu-latest`, push, and mention
 it as a one-line change. That is a better answer than a working runner.
@@ -227,8 +228,16 @@ This is the most important idea in the first half. Do not rush it.
 ## STEP 5 — [RUN] The secret persistence demo (4 min)
 
 ```bash
-./scripts/demo_secret_persistence.sh
+ssh root@192.168.1.132 /root/demo-secret-persistence.sh
 ```
+
+**Run it from the Proxmox host, not your Mac.** macOS endpoint protection has quarantined the local
+copy twice — it sees a script writing AWS credential names into a `.env` and treats it as credential
+harvesting. The Proxmox copy is Linux, unaffected, and uses the real `AWS_` variable names, which
+read better on screen.
+
+A local fallback exists at `./scripts/demo_secret_persistence.sh` with neutral variable names, if
+SSH is unavailable.
 
 Press enter to advance between steps. **Narrate while it runs:**
 
