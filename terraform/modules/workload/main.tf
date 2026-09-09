@@ -80,6 +80,16 @@ variable "gateway" {
   description = "Default gateway for this environment's segment"
 }
 
+variable "host_octet_base" {
+  type        = number
+  description = "First host octet for workload containers. Must avoid .1 (gateway) and .10 (runner)."
+  default     = 20
+  validation {
+    condition     = var.host_octet_base >= 20 && var.host_octet_base <= 200
+    error_message = "host_octet_base must be between 20 and 200, to avoid the gateway and the runner."
+  }
+}
+
 variable "start_on_boot" {
   type        = bool
   description = "Restart automatically after a host reboot. Required in production."
@@ -129,7 +139,13 @@ resource "proxmox_virtual_environment_container" "app" {
 
     ip_config {
       ipv4 {
-        address = "${var.subnet_prefix}.${var.vmid_base % 100 + count.index}/24"
+        # Host octet is a fixed offset, NOT derived from the VMID. Deriving it
+        # from the VMID put app-dev-1 on 10.10.10.1 -- the gateway address --
+        # because 301 % 100 = 1. Segment layout is now explicit:
+        #   .1   bridge / gateway
+        #   .10  CI runner
+        #   .20+ workload containers
+        address = "${var.subnet_prefix}.${var.host_octet_base + count.index}/24"
         gateway = var.gateway
       }
     }
