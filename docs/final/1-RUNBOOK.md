@@ -4,22 +4,82 @@ The document I read while I present.
 
 ---
 
-# Why I'm here
+# Introduction
 
-Companies leak passwords into their code. Then they delete the file and think they've fixed it.
+I am George Park. I work in operations and platform engineering. Kubernetes, Terraform, CI/CD,
+observability, across AWS and GCP.
 
-They haven't.
+For the last few years my job has been keeping platforms running and making the path to production
+safe for other people to use.
 
-I'm going to show you that, then show you a pipeline that stops it happening.
+Today I want to teach you something I learned by accident, and then show you what I built because of
+it.
 
 ---
 
-# What I'm going to prove
+# The problem
 
-1. A password deleted from git is still there
-2. Bad infrastructure code gets blocked before it merges
-3. Nothing reaches production without a person approving it
-4. All of it is running right now, and I can change it in front of you
+Companies leak passwords into their code.
+
+That part is not surprising. What surprised me is what happens next.
+
+They notice. They delete the file. They add it to gitignore. Some of them go further and add
+encryption.
+
+And the password is still there.
+
+The repository looks clean afterwards. The commit history says somebody handled it. Nobody handled
+it.
+
+That is what I want you to walk away knowing.
+
+---
+
+# What I am trying to achieve today
+
+Four things.
+
+**1. Show you the problem is real.**
+
+Not a slide about it. I will show you a password surviving every fix people normally apply.
+
+**2. Show you a pipeline that stops it.**
+
+Running right now, on hardware in my house. Not a diagram.
+
+**3. Show you the judgment, not just the tools.**
+
+Anyone can install a scanner. The hard part is deciding what should stop somebody's work, and being
+able to defend that list to an engineer and to an auditor.
+
+**4. Make a change in front of you.**
+
+I will change one number, push it, and you will watch it go through the checks, wait for an approval,
+and build a new server. About six minutes end to end.
+
+---
+
+# What this demo covers
+
+**In scope:**
+
+- Secret scanning across the whole git history
+- Infrastructure code scanning, with different rules per environment
+- A pull request that cannot merge without a review and passing checks
+- Development deploying automatically, staging and production waiting for a person
+- Terraform building real servers, Ansible installing the application
+- Each environment isolated from the others
+
+**Out of scope, and I will say so if asked:**
+
+- **No Docker, no Kubernetes.** These are Linux containers built by Terraform. I will explain why, and
+  what would change if you ran Kubernetes.
+- **No cloud account.** This runs on a Proxmox server at home instead of AWS. The pipeline is
+  identical; only the last command differs.
+- **No runtime security.** This stops bad things before deployment. It does not watch what happens
+  afterwards.
+- **One person.** I am the only account on this repository, so I cannot approve my own work. In a real
+  team that is a second engineer.
 
 ---
 
@@ -27,14 +87,34 @@ I'm going to show you that, then show you a pipeline that stops it happening.
 
 A GitHub repository with Terraform in it.
 
-When I change that code, a pipeline checks it. If it passes, and a person approves, it builds Linux
-servers.
+When I change that code and open a pull request, four checks run on machines I own. If they pass, and
+a person approves, Terraform builds Linux servers and Ansible installs a web application on them.
 
-Right now there are five servers running a small web application.
+Right now there are four servers running:
 
 - 1 for development
 - 1 for staging
-- 3 for production
+- 2 for production
+
+By the end of this demo there will be five.
+
+---
+
+# How the next thirty minutes go
+
+```
+ 4 min    the story, no screen
+ 2 min    set up the demo
+ 6 min    prove a deleted password is still there
+ 3 min    show the checks blocking bad code
+ 4 min    show the pull request, blocked
+ 2 min    merge it
+ 4 min    watch it deploy, approve staging and production
+ 4 min    show the new server answering
+ 2 min    close
+```
+
+They told me they will ask questions while I go. Good. Every interruption is a conversation.
 
 ---
 
