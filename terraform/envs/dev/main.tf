@@ -18,15 +18,20 @@ terraform {
     }
   }
 
-  # State is remote, encrypted, and locked. Commented out so the repository can
-  # be planned without a real AWS account; uncomment on first real use.
-  # backend "s3" {
-  #   bucket         = "tm-terraform-state-dev"
-  #   key            = "claims-platform/dev/terraform.tfstate"
-  #   region         = "us-east-2"
-  #   encrypt        = true
-  #   dynamodb_table = "tm-terraform-locks"
-  # }
+  # Remote state in PostgreSQL, one database per environment.
+  #
+  # The `pg` backend gives real state locking through Postgres advisory locks,
+  # which is what S3 + DynamoDB buys you on AWS. Without locking, two applies
+  # racing each other can corrupt state, and that is not a theoretical problem.
+  #
+  # Deliberately a PARTIAL configuration: the connection string carries a
+  # password, so it is supplied at init time from a SOPS-encrypted file that
+  # only this environment's runner can decrypt. Nothing secret is committed.
+  #
+  #   terraform init -backend-config="conn_str=$CONN_STR"
+  backend "pg" {
+    schema_name = "terraform_dev"
+  }
 }
 
 provider "aws" {

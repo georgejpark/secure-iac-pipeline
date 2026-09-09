@@ -129,11 +129,34 @@ jobs:
       - name: Terraform format
         run: terraform fmt -check -recursive terraform/
 
-      - name: Terraform validate
+      # Decrypts with the age key that exists ONLY on this runner. The dev
+      # runner physically cannot read stage or prod credentials, so a
+      # compromised dev build gains nothing by reading the encrypted file --
+      # which is committed, in the open, on purpose.
+      - name: Decrypt state credentials (SOPS)
+        id: sops
+        working-directory: terraform/envs/${{ matrix.environment }}
+        env:
+          SOPS_AGE_KEY_FILE: /home/runner/.config/sops/age/keys.txt
+        run: |
+          eval "$(sops --decrypt secrets.enc.yaml \
+            | sed -n 's/^\([a-z_]*\): \(.*\)$/TF_\U\1\E="\2"/p')"
+          # masked so it cannot appear in a log, even on failure
+          echo "::add-mask::${TF_PASSWORD}"
+          CONN="postgres://${TF_USERNAME}:${TF_PASSWORD}@${TF_HOST}/${TF_DATABASE}?sslmode=disable"
+          echo "::add-mask::${CONN}"
+          echo "conn_str=${CONN}" >> "$GITHUB_OUTPUT"
+          echo "Decrypted credentials for ${TF_DATABASE} as ${TF_USERNAME}"
+
+      - name: Terraform init against remote state
         working-directory: terraform/envs/${{ matrix.environment }}
         run: |
-          terraform init -backend=false -input=false
-          terraform validate
+          terraform init -input=false \
+            -backend-config="conn_str=${{ steps.sops.outputs.conn_str }}"
+
+      - name: Terraform validate
+        working-directory: terraform/envs/${{ matrix.environment }}
+        run: terraform validate
 
       # continue-on-error so a finding does not kill the job before triage has
       # had a chance to explain it. The gate is ai_triage.py --fail-on-blocking,

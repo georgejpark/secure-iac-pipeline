@@ -1,0 +1,22 @@
+# SOPS encryption rules.
+#
+# One age recipient per environment. The matching PRIVATE key exists only on
+# that environment's runner, so the prod runner is the only thing that can
+# decrypt prod secrets -- the network isolation, extended to cryptography.
+#
+# Public keys are safe to commit. That is the point of them.
+#
+# encrypted_regex means only VALUES are encrypted; keys stay readable, so a
+# reviewer can see WHICH secret changed in a diff without seeing its value.
+creation_rules:
+  - path_regex: terraform/envs/dev/secrets\.enc\.yaml$
+    age: age1x4ffys7temhayt3d70ej59yx5vwp7vnwztg56xqrxv5ltka0juusjjahnf
+    encrypted_regex: '^(password|conn_str|token|key|secret)$'
+
+  - path_regex: terraform/envs/stage/secrets\.enc\.yaml$
+    age: age1ffld2wup8ld5tm5rc9npp2uv2clswt5pqj72u60kfragejqmgpnqjwd5mz
+    encrypted_regex: '^(password|conn_str|token|key|secret)$'
+
+  - path_regex: terraform/envs/prod/secrets\.enc\.yaml$
+    age: age190k0uwl3ach8mquhdm0rrxvj76mjspv9tdvkz0lekuyg2skwycjql6027w
+    encrypted_regex: '^(password|conn_str|token|key|secret)$'

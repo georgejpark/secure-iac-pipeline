@@ -22,3 +22,8 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+
+# SOPS: encrypted files ARE committed on purpose. Plaintext never is.
+secrets.yaml
+secrets.dec.yaml
+*.dec.yaml
