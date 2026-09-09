@@ -79,6 +79,37 @@ These are what the pipeline creates.
 Production has **two** because production specifies two. That number lives in one place:
 `terraform/deploy/prod/main.tf`.
 
+### What each container does in the pipeline
+
+This is the table to have in your head. Left column is what you see in the Proxmox tree; right
+column is what it does when a pull request lands.
+
+| Container | What it is | Its job when CI runs |
+|---|---|---|
+| **201 `ci-dev`** | GitHub Actions runner | Runs the **secret scan** for every PR, and the **dev** IaC scan and deploy. Holds the dev age key. |
+| **202 `ci-stage`** | GitHub Actions runner | Runs the **stage** IaC scan and deploy. Holds the stage age key. Nothing else. |
+| **203 `ci-prod`** | GitHub Actions runner | Runs the **prod** IaC scan and deploy. Holds the prod age key. Only ever executes prod jobs. |
+| **204 `tf-state`** | PostgreSQL 17 | Holds Terraform state — one database per environment, each reachable only from its own subnet. Never runs pipeline code. |
+| **301 `app-dev-1`** | The application, dev | Created by `terraform apply` in the dev deploy job. Ansible then installs the service. |
+| **311 `app-stage-1`** | The application, stage | Same, from the stage job — which waits for a reviewer. |
+| **321 `app-prod-1`** | The application, prod | Same, from the prod job. Delete protection on. |
+| **322 `app-prod-2`** | The application, prod | The second replica. Production specifies two. |
+
+### Which GitHub Actions job runs where
+
+| Workflow job | Runner | What it does |
+|---|---|---|
+| `secret-scan` | `ci-dev` | gitleaks over the **entire history** (`fetch-depth: 0`) |
+| `iac-scan (dev)` | `ci-dev` | Checkov + AI triage + the blocking gate |
+| `iac-scan (stage)` | `ci-stage` | same, with 4 extra promotion-gated policies |
+| `iac-scan (prod)` | `ci-prod` | same as stage |
+| `deploy (dev)` | `ci-dev` | SOPS → terraform init → plan → policy gate → apply |
+| `deploy (stage)` | `ci-stage` | same, **after a reviewer approves** |
+| `deploy (prod)` | `ci-prod` | same, **after a reviewer approves** |
+
+**Secret scanning runs on the dev runner deliberately.** It only reads source code, so it is given
+the least privilege of the three.
+
 ### The network layout
 
 Each environment is its own isolated bridge with no physical port:
