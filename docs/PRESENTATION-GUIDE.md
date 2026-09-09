@@ -28,8 +28,20 @@ rush the demo to protect the rollout slide; the demo is the thing they will reme
 - [ ] Run `make demo` **once** to warm it up, then `clear`
 - [ ] Open the GitHub repo in a browser tab, on the Actions tab with a green run visible
 - [ ] Open `docs/img/pipeline-flow.png` in a second tab
+- [ ] Open `docs/img/system-architecture.png` in a third tab
+- [ ] Confirm the three runners are online: `gh api repos/georgejpark/secure-iac-pipeline/actions/runners --jq '.runners[].status'` — if any say offline, the Proxmox box needs a nudge, or just present from GitHub-hosted (one-line change, and say so)
 - [ ] Close Slack, Mail, and notifications. Do Not Disturb on.
 - [ ] Have this file open on a **second screen or printed** — not the one you are sharing
+
+### If the Proxmox box is down on the day
+
+Do not panic and do not debug it live. Change `runs-on:` back to `ubuntu-latest`, push, and say:
+
+> "This normally runs on self-hosted runners for data-residency reasons — that's a one-line change,
+> and I'll show you the architecture in the diagram."
+
+The whole point is that the gates do not depend on where they execute. Demonstrating that calmly is
+better than a working runner.
 
 ### The one-sentence version
 
@@ -222,6 +234,57 @@ Show it:
 > That's the whole job, really. Not running the scanner. Deciding which six of the twenty-four are
 > worth stopping someone's afternoon over."
 
+### 3c-bis. Where this actually runs (show the architecture diagram)
+
+**Open `docs/img/system-architecture.png`.** Give them a few seconds to read it before you talk.
+
+> "One thing worth showing you: this doesn't run on GitHub's runners. It runs on three self-hosted
+> runners on a box in my house — one per environment, each in its own unprivileged container, each on
+> its own isolated network segment.
+>
+> And I want to explain *why three*, because I think it's the most interesting decision in the whole
+> thing."
+
+Then the argument — this is the senior moment:
+
+> "If you use one shared runner, a pull request that touches **dev** executes arbitrary code on the
+> same machine that later deploys **production**.
+>
+> So a malicious change — or honestly just a compromised dependency in a dev branch — can leave
+> something behind that fires during the prod job. Or read the credentials that prod job obtains.
+>
+> That's a privilege escalation path from dev straight to prod. And it's the main reason GitHub
+> themselves tell you not to share self-hosted runners across trust levels.
+>
+> Three runners removes it. The prod runner only ever executes prod jobs, and nothing on the dev
+> segment can even route to it."
+
+Show the proof:
+
+```
+dev   -> prod   ICMP     BLOCKED
+dev   -> prod   tcp/22   BLOCKED
+stage -> prod   ICMP     BLOCKED
+prod  -> dev    ICMP     BLOCKED
+each  -> api.github.com  HTTP 200
+```
+
+> "Isolated, but each one still reaches GitHub. Because isolation that also breaks your runner isn't
+> isolation, it's an outage.
+>
+> And note the direction — the runners connect **outbound**. GitHub never connects in. There's no
+> port forward, no exposed service, no inbound firewall rule. That's what makes self-hosting CI
+> acceptable without putting a listener on the internet."
+
+**Why this matters to *them* specifically** — say this part, it is the relevance argument:
+
+> "For an insurer this isn't a cost decision. It's data residency and auditability — being able to
+> answer 'where was this built, on whose hardware, and who could reach that machine' with something
+> more specific than 'a shared cloud runner somewhere'.
+>
+> And the gates are identical either way. Moving between GitHub-hosted and self-hosted is a one-line
+> change. The security properties are what I actually care about."
+
 ### 3d. Where the AI goes — and where it doesn't
 
 > "There's an AI component, and I want to be precise about where it sits, because I think most
@@ -348,6 +411,21 @@ Short answers. Do not over-explain — they have 30 minutes of Q&A and will foll
 **"What if the AI gives bad advice?"**
 > "It can't change the outcome — it only writes the explanation. The gate is a hardcoded list. Worst
 > case you get a poorly worded comment on a correctly blocked PR."
+
+**"Why self-hosted runners instead of GitHub's?"**
+> "For a regulated business, data residency and auditability. You can say exactly where the code was
+> built and who could reach that machine. The gates are the same either way — it's a one-line
+> `runs-on` change — so I'd start on GitHub-hosted and move only if compliance asked for it."
+
+**"What if one of those runners gets compromised?"**
+> "That's what the segmentation is for. A compromised dev runner has no route to stage or prod and no
+> cloud credentials of its own — it only gets a short-lived OIDC token scoped to dev. The blast radius
+> is one environment. I'd also rebuild the containers regularly; they're disposable by design."
+
+**"Who patches those boxes?"**
+> Be honest: *"In a lab, me. In production I'd want them ephemeral — rebuilt from an image per job, or
+> autoscaled — so patching becomes rebuilding rather than maintaining. Long-lived runners accumulating
+> state is a real operational smell."*
 
 **"Why Checkov over tfsec / Terrascan / Snyk?"**
 > "Checkov has the broadest Terraform policy coverage and clean SARIF output for the GitHub Security

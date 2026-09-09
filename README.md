@@ -91,6 +91,32 @@ silently in a config file where the next engineer will never find it.
 
 ---
 
+## Where CI runs
+
+Not on GitHub-hosted runners. Three self-hosted runners on a Proxmox host, one per environment, each
+in an unprivileged LXC container on its own isolated network segment.
+
+| | dev | stage | prod |
+|---|---|---|---|
+| Container | `ci-dev` | `ci-stage` | `ci-prod` |
+| Segment | `10.10.10.0/24` | `10.20.10.0/24` | `10.30.10.0/24` |
+
+**Why three and not one.** With a shared runner, a pull request touching dev executes on the same
+machine that later deploys production — a privilege escalation path from dev to prod. Three runners
+remove it: the prod runner only ever runs prod jobs, and nothing on the dev segment can route to it.
+
+Verified in both directions:
+
+```
+dev   -> prod  ICMP/tcp22   BLOCKED
+stage -> prod  ICMP         BLOCKED
+prod  -> dev   ICMP         BLOCKED
+each  -> api.github.com     HTTP 200
+```
+
+Runners connect **outbound only** — no inbound port is open. Full build in
+[`docs/RUNNER-INFRASTRUCTURE.md`](docs/RUNNER-INFRASTRUCTURE.md).
+
 ## Quick start
 
 ```bash
