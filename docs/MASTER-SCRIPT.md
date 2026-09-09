@@ -81,6 +81,61 @@ interruption is a conversation, and a conversation is what gets you hired.
 
 ---
 
+## STEP 0 — The story, in ninety seconds (1.5 min)
+
+Say this before anything else. It tells them what the next thirty minutes is and why it matters, so
+every demo afterwards lands in a frame they already have.
+
+### [SAY]
+
+> "Here's what I'm going to show you, and why.
+>
+> A few weeks ago I found a hundred and twelve private keys committed to one repository. Twenty-one
+> production hostnames. Nine months. And it wasn't carelessness — the deployment scripts *required*
+> committing the key, so the exposure wasn't a mistake in the process, it **was** the process.
+>
+> That sent me down a rabbit hole, and what I found at the bottom is the thing I actually want to
+> teach you: **deleting a secret from git doesn't remove it.** The fix that feels most thorough
+> leaves you completely exposed while making your commit log look like you handled it.
+>
+> So I built the pipeline I'd want, and I brought it with me. It's running right now.
+>
+> There's a GitHub repository with Terraform in it. When I change that Terraform and open a pull
+> request, four things happen before anyone looks at it: it scans the entire git history for
+> secrets, it scans the infrastructure code against three different policy sets — one per
+> environment — it writes me a plain-English explanation of what it found, and it blocks the merge
+> if any of it matters.
+>
+> When a reviewer approves and it merges, it deploys — dev automatically, staging and production
+> only after a human approves. Each environment deploys on its own runner, on its own isolated
+> network, with its own encryption key and its own database. And at the end of that, four containers
+> are running a small Python service you can curl.
+>
+> I'll walk the whole path, live. And along the way I'll show you three things that went wrong while
+> I built it, because those turned out to be more interesting than the parts that worked."
+
+### The frame this sets
+
+| You've told them | So later they understand |
+|---|---|
+| The 112 keys | Why any of this matters |
+| "It *was* the process" | Why you fix systems, not people |
+| "Deleting doesn't remove" | The demo in Step 5 |
+| Four things before review | Gates 1–3 |
+| Approval for stage and prod | The pause in Step 14d |
+| Isolated per environment | The three boundaries in Step 14b |
+| "Three things that went wrong" | Sets up Step 16 as a payoff, not an admission |
+
+### Two words to avoid
+
+You are **not** running Docker, Kubernetes or FastAPI. It is **LXC containers** provisioned by
+Terraform, running a **Python `http.server`** installed by **Ansible** under systemd.
+
+Say that plainly. "Show me the Dockerfile" is a bad moment to discover there isn't one, and the real
+architecture is a perfectly good answer.
+
+---
+
 ## STEP 1 — Open with the thesis (1 min)
 
 **Do not share your screen yet.** Let them look at you.
