@@ -207,72 +207,79 @@ jobs:
           exit 1
 
   # ===========================================================================
-  # PLAN -- only after both gates pass. Uses OIDC, never a stored AWS key.
+  # DEPLOY -- the part that actually creates infrastructure.
+  #
+  # dev applies automatically on merge. stage and prod are gated by a required
+  # reviewer on the GitHub Environment, so promotion is a decision rather than
+  # a side effect of a merge.
   # ===========================================================================
-  plan:
-    name: Plan (${{ matrix.environment }})
+  deploy:
+    name: Deploy (${{ matrix.environment }})
     runs-on: [self-hosted, "${{ matrix.environment }}"]
     needs: [secret-scan, iac-scan]
-    if: github.event_name == 'pull_request'
-    permissions:
-      contents: read
-      id-token: write # required to request the OIDC token
-      pull-requests: write
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     strategy:
       fail-fast: false
+      max-parallel: 1        # dev, then stage, then prod
       matrix:
         environment: [dev, stage, prod]
     environment: ${{ matrix.environment }}
     steps:
       - uses: actions/checkout@v4
 
+      - name: Decrypt credentials (SOPS)
+        id: sops
+        working-directory: terraform/deploy/${{ matrix.environment }}
+        env:
+          SOPS_AGE_KEY_FILE: /home/runner/.config/sops/age/keys.txt
+        run: |
+          eval "$(sops --decrypt ../../envs/${{ matrix.environment }}/secrets.enc.yaml \
+            | sed -n 's/^\([a-z_]*\): \(.*\)$/S_\U\1\E="\2"/p')"
+          for v in "$S_PASSWORD" "$S_PVE_TOKEN_SECRET"; do echo "::add-mask::$v"; done
+          CONN="postgres://${S_USERNAME}:${S_PASSWORD}@${S_HOST}/${S_DATABASE}?sslmode=disable"
+          echo "::add-mask::$CONN"
+          {
+            echo "conn_str=$CONN"
+            echo "pve_endpoint=$S_PVE_ENDPOINT"
+            echo "pve_token_id=$S_PVE_TOKEN_ID"
+            echo "pve_token_secret=$S_PVE_TOKEN_SECRET"
+          } >> "$GITHUB_OUTPUT"
 
-      # No access key, no secret key, nothing long-lived. GitHub presents a
-      # signed OIDC token; the AWS role's trust policy accepts it only for this
-      # repository and only for the matching environment. Credentials last
-      # about an hour and cannot be exfiltrated from `secrets`.
-      - name: Assume AWS role via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-          role-session-name: gha-plan-${{ matrix.environment }}-${{ github.run_id }}
+      - name: Terraform init
+        working-directory: terraform/deploy/${{ matrix.environment }}
+        run: |
+          terraform init -input=false \
+            -backend-config="conn_str=${{ steps.sops.outputs.conn_str }}"
 
       - name: Terraform plan
-        working-directory: terraform/envs/${{ matrix.environment }}
+        working-directory: terraform/deploy/${{ matrix.environment }}
+        env:
+          TF_VAR_pve_endpoint: ${{ steps.sops.outputs.pve_endpoint }}
+          TF_VAR_pve_token_id: ${{ steps.sops.outputs.pve_token_id }}
+          TF_VAR_pve_token_secret: ${{ steps.sops.outputs.pve_token_secret }}
         run: |
-          terraform init -input=false
           terraform plan -input=false -no-color -out=tfplan
+          terraform show -json tfplan > plan.json
 
-  # ===========================================================================
-  # APPLY -- dev on merge. stage and prod require a reviewer on the GitHub
-  # Environment, so promotion is a human decision, not a side effect of a merge.
-  # ===========================================================================
-  apply-dev:
-    name: Apply (dev)
-    runs-on: [self-hosted, dev]
-    needs: [secret-scan, iac-scan]
-    # Only runs when an AWS role has actually been configured on the
-    # environment. Without it the job is skipped rather than failing, so the
-    # pipeline is demonstrable without a cloud account attached.
-    if: |
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      vars.AWS_ROLE_ARN != ''
-    permissions:
-      contents: read
-      id-token: write
-    environment: dev
-    steps:
-      - uses: actions/checkout@v4
-      - name: Assume AWS role via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-          role-session-name: gha-apply-dev-${{ github.run_id }}
-      - name: Terraform apply
-        working-directory: terraform/envs/dev
+      # Checkov has no Proxmox coverage, so this code would otherwise pass every
+      # scan by being unrecognised -- a control that inspects nothing and
+      # reports success. The policy is written against the PLAN, which is what
+      # will actually be created.
+      - name: Deploy policy gate
+        working-directory: terraform/deploy/${{ matrix.environment }}
         run: |
-          terraform init -input=false
-          terraform apply -input=false -auto-approve
+          python3 ../../../scripts/policy_check.py \
+            --plan plan.json \
+            --environment ${{ matrix.environment }}
+
+      - name: Terraform apply
+        working-directory: terraform/deploy/${{ matrix.environment }}
+        env:
+          TF_VAR_pve_endpoint: ${{ steps.sops.outputs.pve_endpoint }}
+          TF_VAR_pve_token_id: ${{ steps.sops.outputs.pve_token_id }}
+          TF_VAR_pve_token_secret: ${{ steps.sops.outputs.pve_token_secret }}
+        run: terraform apply -input=false -no-color tfplan
+
+      - name: What is running
+        working-directory: terraform/deploy/${{ matrix.environment }}
+        run: terraform output -no-color

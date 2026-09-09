@@ -11,12 +11,12 @@
 creation_rules:
   - path_regex: terraform/envs/dev/secrets\.enc\.yaml$
     age: age1x4ffys7temhayt3d70ej59yx5vwp7vnwztg56xqrxv5ltka0juusjjahnf
-    encrypted_regex: '^(password|conn_str|token|key|secret)$'
+    encrypted_regex: '^(password|conn_str|token|key|secret|.*_secret|.*_password|.*_token)$'
 
   - path_regex: terraform/envs/stage/secrets\.enc\.yaml$
     age: age1ffld2wup8ld5tm5rc9npp2uv2clswt5pqj72u60kfragejqmgpnqjwd5mz
-    encrypted_regex: '^(password|conn_str|token|key|secret)$'
+    encrypted_regex: '^(password|conn_str|token|key|secret|.*_secret|.*_password|.*_token)$'
 
   - path_regex: terraform/envs/prod/secrets\.enc\.yaml$
     age: age190k0uwl3ach8mquhdm0rrxvj76mjspv9tdvkz0lekuyg2skwycjql6027w
-    encrypted_regex: '^(password|conn_str|token|key|secret)$'
+    encrypted_regex: '^(password|conn_str|token|key|secret|.*_secret|.*_password|.*_token)$'
