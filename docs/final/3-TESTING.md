@@ -6,67 +6,20 @@ How to prove the thing works, and what all the servers are.
 
 # The servers
 
-There are nine containers on one Proxmox host. Two groups.
+See document 5, THE SERVERS, for what each one is and does.
 
-## The 20X group runs the pipeline
-
-These are the machines that do the checking and the building.
-
-**201  ci-dev**
-
-Runs the checks for development. Also runs the password scan for every pull request, because that job
-only reads code and needs no access to anything.
-
-**202  ci-stage**
-
-Runs the checks and the deployment for staging. Nothing else.
-
-**203  ci-prod**
-
-Runs the checks and the deployment for production. Only ever runs production jobs.
-
-**204  tf-state**
-
-A PostgreSQL database. It remembers what Terraform has already built, so it knows what to change.
-
-### Why three machines and not one
-
-If one machine ran everything, code from a development pull request would run on the same machine that
-deploys production.
-
-Somebody could put something in a development branch and reach production with it.
-
-Three machines means development code never touches the production machine.
-
-## The 30X group runs the application
-
-**301  app-dev-1**       development
-**311  app-stage-1**     staging
-**321  app-prod-1**      production
-**322  app-prod-2**      production
-**323  app-prod-3**      production
-
-Production has three because the file says three.
-
----
-
-# Where they live
-
-Each environment is on its own network.
+Quick reminder:
 
 ```
-Development    10.10.10.x
-Staging        10.20.10.x
-Production     10.30.10.x
-Management     10.40.10.x
-```
+201 ci-dev       checks and deploys development
+202 ci-stage     checks and deploys staging
+203 ci-prod      checks and deploys production
+204 tf-state     remembers what has been built
 
-Within each one:
-
-```
-.1     the gateway
-.10    the pipeline machine
-.20+   the application servers
+301 app-dev-1    development web server
+311 app-stage-1  staging web server
+321 app-prod-1   production web server
+322 app-prod-2   production web server
 ```
 
 ---
