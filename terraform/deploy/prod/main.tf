@@ -55,7 +55,7 @@ module "workload" {
   vmid_base     = 321
   replica_count = 2
   cores         = 2
-  memory_mb     = 2048
+  memory_mb     = 3072
   disk_gb       = 20
   bridge        = "vmbr3"
   subnet_prefix = "10.30.10"
