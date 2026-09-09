@@ -345,6 +345,47 @@ That is the choice the pipeline exists to force, and it is worth noting that it 
 
 ---
 
+## 7a. The pipeline's first run failed, and the reason matters
+
+The first push of this repository failed CI. The cause is worth recording, because it is the exact
+failure this document argues against.
+
+`gitleaks-action@v2` scans only the **pushed commit range**. On a repository's first push, that range
+is `<first-commit>^..HEAD` — and the first commit has no parent. Git rejected the revision, the scan
+covered nothing, and the action printed this:
+
+```
+ERR  [git] fatal: ambiguous argument 'd0c7705^..cc5aa75': unknown revision
+WRN  scanned ~0 bytes (0)
+WRN  no leaks found in partial scan
+```
+
+**"Scanned ~0 bytes" and "no leaks found" on consecutive lines.** The job happened to exit non-zero
+here, so it was noticed. Had the range resolved to something valid but incomplete — a force-push, a
+squashed history, a shallow clone — it would have reported a clean pass having examined almost
+nothing, and nobody would have looked again.
+
+That is worse than having no scanner, because it manufactures confidence. A control that cannot fail
+loudly is not a control.
+
+The fix was to stop using the range-scanning action and pin the gitleaks binary directly:
+
+```yaml
+- name: Scan the entire repository history
+  run: |
+    gitleaks detect --source . --config .gitleaks.toml \
+      --redact --verbose --exit-code 1
+```
+
+Slightly slower. Scans everything, every run, with no dependence on what a commit range resolves to.
+
+**The generalisable rule: verify that a security control actually inspected something.** A pass is
+only meaningful alongside a count of what was examined. This is the same class of error as
+`fetch-depth: 0` in §3 — in both cases the tool is installed, configured, reporting success, and
+looking at nothing.
+
+---
+
 ## 8. What this deliberately does not do
 
 Stated so the gaps are deliberate rather than discovered later.

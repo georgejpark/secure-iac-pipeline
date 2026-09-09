@@ -246,6 +246,45 @@ unset ANTHROPIC_API_KEY && make scan
 > Because if you let a language model decide whether a merge is safe, you've built a system where an
 > API outage is a security bypass. That's not a tradeoff I'd make."
 
+### 3d-bis. The story that proves the whole point (use this one)
+
+This is the strongest thing you have. It happened while building this, it is in the public Actions
+log, and it demonstrates the thesis better than anything you could design.
+
+> "I want to show you one more thing, because it happened to me while I was building this and it
+> makes the point better than anything I planned.
+>
+> The very first time I pushed this repository, CI failed. And when I read the log, here is what the
+> secret scanner said —"
+
+Show these two lines. Read them **slowly**, and read them out loud:
+
+```
+WRN  scanned ~0 bytes (0)
+WRN  no leaks found in partial scan
+```
+
+> "It scanned zero bytes. And it reported no leaks found.
+>
+> The action I was using only scans the range of commits you just pushed. On a first push, that range
+> is 'the commit before the first commit' — which doesn't exist. Git threw an error, the scan covered
+> nothing, and the tool still printed a pass.
+>
+> Now — I got lucky. It happened to exit non-zero, so I noticed. If that range had resolved to
+> something valid but incomplete — a force-push, a squashed branch, a shallow clone — it would have
+> said 'no leaks found' having looked at almost nothing, and I'd never have checked again.
+>
+> **That's worse than having no scanner at all, because it manufactures confidence.**
+>
+> So I threw the action away and pinned the binary, scanning full history every run. It's a bit
+> slower. It looks at everything.
+>
+> And the rule I'd take from it: **check that your security control actually inspected something.** A
+> green check mark is not a result. A green check mark next to a byte count is a result."
+
+If they engage with this, let the conversation go there — this is the most senior thing in your talk,
+and it is the thing a security-minded panellist will most want to discuss.
+
 ### 3e. No stored credentials
 
 > "Last piece. There's no AWS access key anywhere in this repo or in GitHub secrets.
@@ -324,6 +363,10 @@ Short answers. Do not over-explain — they have 30 minutes of Q&A and will foll
 > "Rotate first — that's the only step that reduces risk today. Then `git filter-repo`, force-push,
 > ask the platform team to garbage collect. And be honest that forks and existing clones still have
 > it, which is exactly why rotation comes first."
+
+**"Has anything actually gone wrong with it?"**  — hope for this one
+> "Yes, on the first push. The secret scanner reported 'no leaks found' after scanning zero bytes."
+> Then tell the story in 3d-bis. It is the best answer you have to any question in this interview.
 
 **"Have you used this in production?"**
 > Be straight: *"This specific repo is a reference implementation I built to demonstrate the pattern
