@@ -219,6 +219,93 @@ execution location changes, which is a one-line `runs-on` difference.
 
 ---
 
+## 3b. State, secrets and real deploys
+
+### Terraform state — PostgreSQL, not S3
+
+There is no cloud account, so the `backend "s3"` block was never usable. State lives in the native
+`pg` backend: one database and one role per environment, on a dedicated management segment.
+
+Postgres advisory locks give **real state locking**, which is precisely what S3 + DynamoDB provides on
+AWS. Without locking, two applies racing each other corrupt state — not a theoretical risk.
+
+`pg_hba.conf` restricts each role to its own subnet:
+
+```
+host  tfstate_dev    tf_dev    10.10.10.0/24   scram-sha-256
+host  tfstate_stage  tf_stage  10.20.10.0/24   scram-sha-256
+host  tfstate_prod   tf_prod   10.30.10.0/24   scram-sha-256
+```
+
+Verified: the dev runner, supplied with the **correct prod password**, is still refused —
+
+```
+FATAL: no pg_hba.conf entry for host "10.10.10.10", user "tf_prod", database "tfstate_prod"
+```
+
+A leaked credential on its own is not sufficient.
+
+### Secrets — SOPS with per-environment age keys
+
+One age keypair per environment. The **private key exists only on the matching runner**, so the prod
+runner is the only thing that can decrypt prod credentials. This is not a new control; it is the
+network isolation of §3a extended into cryptography.
+
+Encrypted files are committed **deliberately**. `encrypted_regex` encrypts values but leaves keys
+readable, so a reviewer can see *which* secret changed in a diff without seeing what it changed to:
+
+```yaml
+username: tf_prod                    # readable
+database: tfstate_prod               # readable
+password: ENC[AES256_GCM,data:...]   # encrypted
+pve_token_id: terraform@pve!ci-prod  # readable
+pve_token_secret: ENC[AES256_GCM,...]# encrypted
+```
+
+Verified: dev and stage runners both fail to decrypt the prod file —
+*"no master key was able to decrypt the file."*
+
+### Real deployments
+
+`terraform/deploy/{dev,stage,prod}` provision LXC containers on Proxmox through the `bpg/proxmox`
+provider, applied by the pipeline on each environment's own runner:
+
+```
+301  app-dev-1                       1 replica,  no boot persistence, no protection
+311  app-stage-1                     1 replica,  boot persistence
+321  app-prod-1                      2 replicas, boot persistence + delete protection
+322  app-prod-2
+```
+
+The AWS definitions in `terraform/envs/` remain as the **scanned artifact** — public-S3 and
+unencrypted-RDS are the findings worth demonstrating, and Proxmox has no equivalent failure modes.
+
+### The deploy policy gate, and why it had to be written by hand
+
+**Checkov ships no rules for the Proxmox provider.** The deploy code therefore passed every scan —
+not because it was safe, but because nothing recognised it. That is the same class of failure as the
+zero-byte scan in §7a: a control that inspects nothing and reports success.
+
+Custom Checkov policies were the obvious fix and do not work: `--external-checks-dir` silently loads
+nothing in Checkov 3.3.16. This was verified against `aws_s3_bucket` — a resource type Checkov
+definitely scans — so it is not a Proxmox-specific problem.
+
+The policy therefore lives in `scripts/policy_check.py` and runs against `terraform show -json` of
+the **plan** rather than the source. The plan is what will actually be created, with variables
+resolved and modules expanded; source-level checks can be defeated by a default changing elsewhere.
+
+| Policy | Requirement | Enforced in |
+|---|---|---|
+| `PVE-1` | Container must be unprivileged | dev, stage, prod |
+| `PVE-2` | Network interface firewall enabled | dev, stage, prod |
+| `PVE-3` | Restart after host reboot | stage, prod |
+| `PVE-4` | Delete protection | prod |
+
+Verified: clean prod passes 8 checks across 2 containers; prod with `protect = false` fails 2 and
+exits 1.
+
+---
+
 ## 4. Environment model
 
 Three environments, one module. The environments differ only in the variables they pass, so they

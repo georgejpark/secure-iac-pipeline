@@ -423,6 +423,86 @@ each  -> api.github.com  HTTP 200
 
 ---
 
+## STEP 14b — State and secrets, without a cloud account (2.5 min)
+
+Expect this question, so answer it before it is asked.
+
+### [SAY]
+
+> "Two things a platform needs that I haven't mentioned: where Terraform state lives, and where
+> secrets come from. There's no AWS account here, so I couldn't use S3 and Secrets Manager.
+>
+> **State** is the native Postgres backend — one database per environment. I chose it because it
+> gives real state locking through Postgres advisory locks, which is exactly what S3 plus DynamoDB
+> buys you on AWS. Without locking, two applies racing each other corrupt state, and that's not
+> theoretical.
+>
+> **Secrets** are SOPS, with one age keypair per environment, and the private key exists only on the
+> matching runner."
+
+### [SAY] — the part worth landing
+
+> "What I like about that second one is it isn't a new control. It's the network isolation extended
+> into cryptography.
+>
+> The prod runner is the only thing on that host that can decrypt prod secrets. A compromised dev
+> runner can read the encrypted file — it's committed, in the open, deliberately — and it simply
+> cannot open it.
+>
+> And there's a third layer: the database itself. `pg_hba` restricts each role to its own subnet."
+
+### [SHOW]
+
+```
+dev runner, WITH the correct prod password:
+  FATAL: no pg_hba.conf entry for host "10.10.10.10", user "tf_prod"
+```
+
+### [SAY]
+
+> "That's the dev runner holding the right password and still being refused, because it's coming from
+> the wrong network. A leaked credential on its own isn't enough. That's three independent boundaries
+> — network, cryptographic, and database — and any one of them failing doesn't open the door."
+
+---
+
+## STEP 14c — It actually deploys (2 min)
+
+### [RUN]
+
+```bash
+ssh root@192.168.1.132 "pct list | grep app-"
+```
+
+### [EXPECT]
+
+```
+301  app-dev-1
+311  app-stage-1
+321  app-prod-1
+322  app-prod-2
+```
+
+### [SAY]
+
+> "And it does actually deploy. Those four containers were created by `terraform apply`, run by the
+> pipeline, on the runner for each environment. Prod gets two replicas, delete protection, and
+> restart-on-boot; dev gets one small one with neither.
+>
+> One thing I want to flag, because I think it's the more interesting half: **Checkov has no rules
+> for the Proxmox provider at all.** So this deploy code passed every scan — not because it was safe,
+> but because nothing recognised it. That's the same failure as the zero-byte scan I'm about to show
+> you: a control that inspects nothing and reports success.
+>
+> So I wrote the policy myself. Four rules, run against `terraform show -json` of the **plan** rather
+> than the source — because the plan is what will actually be created, with variables resolved.
+> Containers must be unprivileged, network firewall on, restart-on-boot from stage upward, delete
+> protection in prod."
+
+**If they ask whether it works:** flip `protect = false` in prod and re-run — 2 failures, exit 1.
+
+---
+
 ## STEP 15 — No stored credentials (2 min)
 
 ### [SAY]
@@ -607,6 +687,27 @@ Short answers. They have thirty minutes and will follow up. **Do not over-explai
 
 ### On the infrastructure
 
+**"Where does Terraform state live?"**
+> "Postgres backend, one database per environment, on its own management segment. Advisory locks give
+> real state locking — what S3 plus DynamoDB buys you on AWS. Each role is restricted by `pg_hba` to
+> its own subnet, so the dev runner is refused prod's database even holding the correct password."
+
+**"How do you handle secrets without a cloud secret manager?"**
+> "SOPS with one age key per environment, private key only on the matching runner. The encrypted
+> files are committed on purpose — `encrypted_regex` encrypts values but leaves keys readable, so a
+> reviewer sees which secret changed without seeing what it changed to. In a real deployment I'd use
+> Vault or the cloud's secret manager; SOPS is the right answer when you want the audit trail in git
+> and no additional service to run."
+
+**"Why not just use GitHub Actions secrets?"**
+> "That works, but it concentrates trust in GitHub — which is the thing OIDC was avoiding. With SOPS
+> the secret is useless to anyone who doesn't hold the environment's key, including GitHub."
+
+**"Does it actually deploy anything?"**
+> "Yes — four LXC containers on Proxmox, created by terraform apply from the pipeline. And worth
+> knowing: Checkov has no Proxmox rules, so that code passed every scan by being unrecognised. I
+> wrote the policy gate myself against the plan JSON."
+
 **"Why self-hosted runners instead of GitHub's?"**
 > "Data residency and auditability for a regulated business. The gates are identical — it's a one-line
 > `runs-on` change — so I'd start hosted and move only if compliance asked."
@@ -738,6 +839,23 @@ Volunteer the right-hand column. It is what makes the left-hand column believabl
 | Cheap on hardware you already have | Not free — it is operational load, which is the expensive kind |
 | Pinned toolchain baked into the image | Pinned versions rot; someone must own upgrading them |
 
+### State and secrets
+
+| Pro | Con |
+|---|---|
+| Postgres gives real state locking, one database per environment | Another service to run, back up and patch |
+| SOPS keeps the audit trail in git — you see when a secret changed | Rotation means re-encrypting and committing; not as smooth as a secret manager |
+| Per-environment age keys extend the isolation into cryptography | Key distribution is manual today; it should be automated |
+| Encrypted files are safe to commit, so nothing lives outside version control | If a private key is lost, the secrets are unrecoverable — needs a documented escrow |
+
+### The deploy policy gate
+
+| Pro | Con |
+|---|---|
+| Runs against the plan, so it sees what will actually be created | Only covers Proxmox containers; every new resource type needs new rules |
+| Written for this codebase, so it checks what actually matters | Homegrown policy is code someone has to maintain |
+| Fills a genuine gap — Checkov has no Proxmox coverage | A general policy engine (OPA/Rego) would scale better across resource types |
+
 ### The honest summary line
 
 > "It's a real improvement with real costs. The biggest risk isn't technical — it's that the blocking
@@ -770,4 +888,6 @@ If you forget everything else:
 5. 24 findings, 10 block. One deliberately un-blocked, and I'll defend that.
 6. The AI explains; it never decides. No key, same gate.
 7. Three runners because one is a dev→prod escalation path.
-8. My own scanner reported "no leaks found" after scanning zero bytes.
+8. Three isolation boundaries: network, cryptographic, database. Any one failing doesn't open the door.
+9. It really deploys — and Checkov has no Proxmox rules, so I wrote the policy gate myself.
+10. My own scanner reported "no leaks found" after scanning zero bytes.
