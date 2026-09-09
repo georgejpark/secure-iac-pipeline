@@ -28,6 +28,18 @@ Read this top to bottom. It runs in the order the interview runs.
 - [ ] Do Not Disturb on. Slack and Mail closed.
 - [ ] **This document open on a second screen or printed** — never on the screen you share
 
+**If the demo script is missing:** macOS endpoint protection quarantined an earlier version of it
+because it generated `AKIA`-prefixed strings — indistinguishable from credential harvesting to a
+heuristic scanner. The committed version uses a synthetic `EXAMPLEKEY` prefix and is not flagged. A
+copy also lives on the Proxmox host as a fallback:
+
+```bash
+ssh root@192.168.1.132 /root/demo-secret-persistence.sh
+```
+
+*(This is worth telling them if it comes up — a security demo blocked by a security control, and the
+reason is a false positive. It is the same theme as the rest of the talk.)*
+
 **If a runner is offline:** do not debug it live. Edit `runs-on:` to `ubuntu-latest`, push, and mention
 it as a one-line change. That is a better answer than a working runner.
 
