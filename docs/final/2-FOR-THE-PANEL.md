@@ -53,8 +53,12 @@ That's it. One number in one file goes from `2` to `3`.
    |             |             |
    +-------------+-------------+
                  |
-        a new server exists
-        and answers
+        terraform builds the server
+                 |
+        the deploy step installs
+        the application on it
+                 |
+        the new server answers
 ```
 
 ---
@@ -179,7 +183,48 @@ GitHub says *Waiting for review*. Someone clicks approve.
 
 Same again. Someone clicks approve.
 
-## 15. A new server exists
+## 15. Terraform builds a new server
+
+The file said two production servers. It now says three. Terraform works out that one is missing and
+creates it.
+
+```
+proxmox_virtual_environment_container.app[2]: Creation complete
+```
+
+That machine is empty. Terraform talks to the Proxmox API to build machines. It never logs into
+them.
+
+## 16. The deploy step installs the application
+
+```bash
+/root/install-app.sh prod
+```
+
+```
+environment=prod  version=1.1.0  containers=3
+  app-prod-1 (321)  already serving 1.1.0  - skipped
+  app-prod-2 (322)  already serving 1.1.0  - skipped
+  app-prod-3 (323)  installing 1.1.0 ...
+    app-prod-3 serving {"version": "1.1.0"}
+done
+```
+
+Two things worth noticing.
+
+**It skipped the servers that were already working.** It asks each one what it is serving before it
+touches anything, so running it twice changes nothing.
+
+**It waits for the health check.** The application answers 503 for the first two seconds on purpose.
+A check that fires immediately after a restart would race it and report a failure that isn't real.
+
+On each container it does seven things: creates a service account so the app does not run as root,
+installs Python if missing, copies the release into its own folder, builds a virtual environment,
+moves the `current` symlink, installs a systemd unit that points at `current` rather than at a version
+number, and waits for health to pass. Moving that symlink *is* the release, which is why a rollback
+is a symlink move and not a redeploy.
+
+## 17. The new server answers
 
 ```bash
 curl http://10.30.10.22:8080/
@@ -193,6 +238,8 @@ curl http://10.30.10.22:8080/
   "version": "1.1.0"
 }
 ```
+
+It knows it is production because it reads that from its own hostname. Nothing had to tell it.
 
 ---
 
@@ -210,7 +257,9 @@ curl http://10.30.10.22:8080/
 
 **Terraform** creates the servers.
 
-**Ansible** installs the application onto servers that already exist.
+**The deploy script** installs the application onto servers that already exist. It creates a
+service account, copies the release into its own folder, and moves one symlink. That symlink move is
+the release, which is why rolling back is a symlink move too.
 
 ---
 
