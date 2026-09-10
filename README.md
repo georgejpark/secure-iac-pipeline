@@ -1,4 +1,16 @@
-# secure-iac-pipeline
+# The Password You Already Deleted
+
+### Secrets in git, and a pipeline that stops them reaching production
+
+George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
+
+Demo repository: **secure-iac-pipeline**
+
+Documents are in [`docs/final/`](docs/final/), diagrams in [`docs/diagrams/`](docs/diagrams/).
+
+---
+
+## secure-iac-pipeline
 
 A working GitHub Actions pipeline that blocks two classes of change from
 reaching a cloud environment: **leaked credentials** and **insecure
@@ -115,34 +127,41 @@ each  -> api.github.com     HTTP 200
 ```
 
 Runners connect **outbound only** — no inbound port is open. Full build in
-[`docs/RUNNER-INFRASTRUCTURE.md`](docs/RUNNER-INFRASTRUCTURE.md).
+[`docs/archive/RUNNER-INFRASTRUCTURE.md`](docs/archive/RUNNER-INFRASTRUCTURE.md).
 
 
 ## What is actually running
 
-**Say what this is, precisely.** Terraform provisions **LXC containers** on a Proxmox host. Ansible
-installs a small **Python HTTP service** into them under systemd. There is **no Docker, no Kubernetes
-and no FastAPI** in this stack.
+**Say what this is, precisely.** Terraform provisions **LXC containers** on a Proxmox host. A
+shell script on the host, `scripts/install_app.sh`, installs a small **Python HTTP service** into
+them under systemd. There is **no Docker, no Kubernetes, no Ansible and no FastAPI** in this stack.
 
 ```
-app-dev-1    10.10.10.20:8080   {"status":"ok"}  {"version":"1.0.0"}
-app-stage-1  10.20.10.20:8080   {"status":"ok"}  {"version":"1.0.0"}
-app-prod-1   10.30.10.20:8080   {"status":"ok"}  {"version":"1.0.0"}
-app-prod-2   10.30.10.21:8080   {"status":"ok"}  {"version":"1.0.0"}
+app-dev-1    10.10.10.20:8080   {"status":"ok"}  {"version":"1.1.0"}
+app-stage-1  10.20.10.20:8080   {"status":"ok"}  {"version":"1.1.0"}
+app-prod-1   10.30.10.20:8080   {"status":"ok"}  {"version":"1.1.0"}
+app-prod-2   10.30.10.21:8080   {"status":"ok"}  {"version":"1.1.0"}
 ```
 
 Production runs two containers because production specifies two.
 
-### Terraform provisions the machine; Ansible installs the application
+### Terraform provisions the machine; the install script installs the application
 
 Keeping those separate is deliberate — rebuilding a container should not mean redeploying the app,
-and redeploying the app should not mean touching infrastructure.
+and redeploying the app should not mean touching infrastructure. Terraform talks to the Proxmox API
+and never logs into a container; the install runs from the host, where `pct exec` can reach every
+container, and skips any that is already serving the right version.
 
-The Ansible role uses a release directory with a symlink:
+It is a shell script rather than Ansible because the job is seven steps on one machine type. Ansible
+earns its place with an inventory and many machine types; here it would be a dependency to install
+and a playbook to maintain for the same seven steps.
+
+The script uses a release directory with a symlink:
 
 ```
 /opt/rapta/inspection/releases/1.0.0/
-/opt/rapta/inspection/current -> releases/1.0.0
+/opt/rapta/inspection/releases/1.1.0/
+/opt/rapta/inspection/current -> releases/1.1.0
 ```
 
 **Rollback is a symlink flip, not a redeploy.**

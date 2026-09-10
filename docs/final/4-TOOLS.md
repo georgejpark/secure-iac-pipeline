@@ -1,3 +1,14 @@
+<!-- title -->
+# The Password You Already Deleted
+
+### Secrets in git, and a pipeline that stops them reaching production
+
+George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
+
+*Document 4 of 7 — Every tool in the pipeline, and what it is for.*
+
+---
+
 # The tools
 
 Everything used to build this, and what each one is for.
@@ -181,9 +192,28 @@ The whole thing runs on hardware I already had.
 
 # What I would add next
 
-**Trivy** scans container images for known vulnerabilities. It would slot in as a fifth check.
+In the order I would actually do it. The first two are worth doing whether or not the rest ever happens,
+which is usually the sign of a sensible order.
 
-**Dependabot** watches for out of date libraries with known problems.
+1. **Trivy as a fifth check.** Scans container images and dependencies for known vulnerabilities.
+   Works today, no Kubernetes required, real value immediately.
+2. **Containerise the application.** Not for scale. For a scannable artifact that step 1 can inspect
+   before it runs.
+3. **Dependabot.** Watches for out-of-date libraries with known problems.
+4. **A second person.** I am the only account on this repository, so I cannot approve my own work.
+   That is the one gap I cannot close on my own.
+5. **k3s on the host, development only.** One node, prove the manifests, leave staging and production
+   on the current path until development is boring.
+6. **Admission control - Gatekeeper or Kyverno.** The same policies the pipeline enforces before a
+   merge, enforced by the cluster when a workload appears. This has to come *before* autoscaling.
+7. **Autoscaling, last.** On queue depth or latency, not CPU, and only once step 6 exists.
 
-**A second person.** I'm the only account on this repository, so I can't approve my own work. That's
-the one gap I can't close on my own.
+# What I would not do
+
+- **Kubernetes for four containers on one host.** The operational cost exceeds the benefit until
+  there is a real scheduling or multi-tenancy problem to solve.
+- **Autoscaling before admission control.** Workloads appearing without a human, with no runtime
+  policy, is strictly worse than what exists now: CI-time policy becomes insufficient the moment a
+  workload can appear without a merge.
+- **`imagePullPolicy: Always` with `:latest`.** It reintroduces exactly the "what is actually running"
+  ambiguity the version-asserting health check was built to remove.

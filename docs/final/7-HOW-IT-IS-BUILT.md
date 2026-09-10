@@ -1,3 +1,14 @@
+<!-- title -->
+# The Password You Already Deleted
+
+### Secrets in git, and a pipeline that stops them reaching production
+
+George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
+
+*Document 7 of 7 — The technical design, in three parts.*
+
+---
+
 # How it is built
 
 The technical design, in three parts:
@@ -309,7 +320,7 @@ These live on the Proxmox host. They were built by hand and are documented in do
         +-----------------------+-----------------------+
                                 |  each runner: port 5432 only, own database only
                                 v
-                     10.40.10.0/24  MANAGEMENT
+                     vmbr4  10.40.10.0/24  MANAGEMENT
                        .10  tf-state (204)  PostgreSQL
                             tfstate_dev / tfstate_stage / tfstate_prod
 ```
@@ -390,7 +401,7 @@ Steps 3 to 20 are the pipeline. Step 21 is the deploy step. Step 22 is the proof
 
 **Dev applies automatically; stage and prod wait.** Blocking dev on production-grade controls is how a team learns to route around the pipeline. Letting prod apply on merge is how an incident starts. The gate is where the cost of being wrong changes.
 
-**Terraform never logs into a container.** It calls the Proxmox API and stops. The runner has no SSH key to the workloads and no route to them either. The install is a separate step from the host. Narrower than a runner that can do everything; honest about where the boundary is today.
+**Terraform never logs into a container.** It calls the Proxmox API and stops. The runner holds no SSH key for a workload. Note what this is and is not: the runner sits on the **same /24** as its own environment's containers and could reach them at the network level. What the forward policy blocks is reaching **another** environment. So this is a separation of duties, not a network impossibility, and it is worth saying that precisely rather than overclaiming. The install is a separate step from the host. Narrower than a runner that can do everything; honest about where the boundary is today.
 
 **The per-environment policy tiers.** Dev is allowed to be cheaper: no boot persistence, no delete protection. Stage must survive a reboot. Prod must survive a reboot and a mistaken `terraform destroy`. The policy table says so in one place, and says why.
 
@@ -405,6 +416,27 @@ Steps 3 to 20 are the pipeline. Step 21 is the deploy step. Step 22 is the proof
 | The GitHub Environments and branch protection | |
 
 The left column is the platform. The right column is what the platform exists to build. The line between them is the line between doc 5 and this document.
+
+---
+
+# What went wrong building it, and what it taught
+
+Recorded because each one cost real time and each has a lesson that is not specific to this build.
+
+| Problem | Cause | Lesson |
+|---|---|---|
+| A workload container came up on the gateway address | The host octet was derived from the VMID: `301 % 100 = 1` | Derive addresses explicitly. Never from an unrelated identifier |
+| New containers could resolve nothing | The module set no DNS servers | A container with no resolver fails everything with "Temporary failure resolving", which reads like a network outage |
+| Gateways reported unreachable | `ping -c 1 -W 1` against a cold ARP cache | A single probe with a short timeout is not a test. The gateways were fine |
+| Containers lost all networking after a NIC edit | `pct set --net0` without `hwaddr=` regenerates the MAC; stale ARP on the host, and the consumer gateway stopped issuing leases after a dozen new MACs | Always pass `hwaddr=`, or use static addressing, and flush ARP after a NIC change |
+| The per-container firewall broke DHCP, then DNS and apt | `policy_in: DROP` also drops the DHCP offer; the firewall bridge drops return traffic for outbound connections | A default-deny inbound policy must permit the protocols that bring the interface up. Isolation moved to the host forward policy, and the flag is off with the reason recorded (policy PVE-2) |
+| VLANs looked usable and were not | The site VLAN gateways answered ICMP but did not forward to the internet | Reachable is not routable. Test the actual path, not the first hop |
+| gitleaks reported "no leaks found" while scanning nothing | The action scans a commit range; on a first push the range has no parent, so it scanned zero bytes | A scanner that passes while scanning nothing is worse than none. Run the pinned binary over the whole tree, every time |
+| `python3 -m venv --help` succeeded, creating a venv failed | On Debian 13 the help text is in the stdlib and the machinery is in a separate package | Test for what you need, not for something adjacent to it. `import ensurepip` is the real check |
+| Postgres came back on loopback only after a reboot | It binds `10.40.10.10` only if that interface is up when it starts | Every `terraform init` then fails with "connection refused". It is the first pre-flight check, and the fix is one restart |
+
+The fix for the three networking rows in the middle was the same: stop depending on the consumer
+gateway and build self-contained NATed segments on the host.
 
 ---
 

@@ -1,3 +1,14 @@
+<!-- title -->
+# The Password You Already Deleted
+
+### Secrets in git, and a pipeline that stops them reaching production
+
+George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
+
+*Document 3 of 7 — What is tested, and how to run it yourself.*
+
+---
+
 # Testing and checking
 
 How to prove the thing works, and what all the servers are.
@@ -196,6 +207,12 @@ no pg_hba.conf entry for host "10.10.10.10"
 ```
 
 Right password. Wrong network. Still refused.
+
+**One trap in this check.** If `/root/creds/prod.pw` were missing, `PW` would be empty and the
+connection would *still* be refused, because Postgres checks the source address before it looks
+at the password. The check would pass while proving nothing. So `validate.sh` treats an empty
+password as a failure, and the file is confirmed present on 204 before the demo.
+
 
 ---
 

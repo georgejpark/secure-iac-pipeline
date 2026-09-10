@@ -1,0 +1,164 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="Actions workflow" id="pipeline-workflow">
+    <mxGraphModel dx="1400" dy="2300" grid="1" gridSize="10" guides="1" tooltips="1"
+                  connect="1" arrows="1" fold="1" page="1" pageScale="1"
+                  pageWidth="1560" pageHeight="2420" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="t" value="The Password You Already Deleted &#8212; GitOps flow, and where every tool is called&#10;One workflow file. Three jobs. Three self-hosted runners."
+          style="text;html=1;align=left;fontSize=19;fontStyle=1;fontColor=#1F2933;"
+          vertex="1" parent="1"><mxGeometry x="40" y="15" width="1200" height="50" as="geometry"/></mxCell>
+
+        <mxCell id="leg" value="LEGEND"
+          style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9AA5B1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;fontSize=11;fontStyle=1;"
+          vertex="1" parent="1"><mxGeometry x="1180" y="15" width="340" height="110" as="geometry"/></mxCell>
+        <mxCell id="leg1" value="TOOL &#8212; GATE: non-zero exit stops the pipeline"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDECEC;strokeColor=#B3261E;strokeWidth=3;fontSize=10;"
+          vertex="1" parent="1"><mxGeometry x="1195" y="42" width="310" height="24" as="geometry"/></mxCell>
+        <mxCell id="leg2" value="TOOL &#8212; ADVICE: reports, never decides (--soft-fail)"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0F0F0;strokeColor=#9AA5B1;dashed=1;fontSize=10;"
+          vertex="1" parent="1"><mxGeometry x="1195" y="70" width="310" height="24" as="geometry"/></mxCell>
+        <mxCell id="leg3" value="AMBER = a person decides"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#C77700;fontSize=10;"
+          vertex="1" parent="1"><mxGeometry x="1195" y="98" width="310" height="22" as="geometry"/></mxCell>
+
+        <!-- PRE-COMMIT -->
+        <mxCell id="pc" value="PHASE 0 &#8212; THE LAPTOP (cheapest gate in the whole pipeline)"
+          style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F7FA;strokeColor=#4A6FA5;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;fontSize=14;fontStyle=1;"
+          vertex="1" parent="1"><mxGeometry x="40" y="135" width="1480" height="130" as="geometry"/></mxCell>
+        <mxCell id="pc1" value="pre-commit hook &#8212; .pre-commit-config.yaml&#10;&#10;gitleaks v8.30.1 (protect mode, uncommitted changes)&#10;terraform_fmt  &#183;  terraform_validate&#10;check-merge-conflict  &#183;  detect-private-key"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDECEC;strokeColor=#B3261E;strokeWidth=3;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;"
+          vertex="1" parent="1"><mxGeometry x="70" y="170" width="420" height="80" as="geometry"/></mxCell>
+        <mxCell id="pc2" value="make scan&#10;&#10;checkov + ai_triage.py for all three environments&#10;&#10;make scan-insecure &#8594; proves the gate blocks:&#10;dev exit=1 blocking=10 &#183; stage/prod exit=1 blocking=14"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A6FA5;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;"
+          vertex="1" parent="1"><mxGeometry x="520" y="170" width="420" height="80" as="geometry"/></mxCell>
+        <mxCell id="pc3" value="A secret caught HERE never becomes a commit.&#10;No history rewrite, no rotation, no incident report.&#10;&#10;Everything downstream is a more expensive&#10;version of this same check."
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#C77700;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;fontStyle=2;"
+          vertex="1" parent="1"><mxGeometry x="970" y="170" width="520" height="80" as="geometry"/></mxCell>
+
+        <!-- PHASE A -->
+        <mxCell id="pa" value="PHASE A &#8212; PULL REQUEST against main  (nothing deploys)"
+          style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F7FA;strokeColor=#4A6FA5;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;fontSize=14;fontStyle=1;"
+          vertex="1" parent="1"><mxGeometry x="40" y="290" width="1480" height="660" as="geometry"/></mxCell>
+
+        <mxCell id="a1" value="git push, open PR&#10;replica_count 2 &#8594; 3"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8EEF7;strokeColor=#4A6FA5;fontSize=12;"
+          vertex="1" parent="1"><mxGeometry x="70" y="330" width="240" height="60" as="geometry"/></mxCell>
+
+        <mxCell id="j1" value="JOB 1 &#8212; secret-scan   runs-on: [self-hosted, dev]&#10;the LOWEST-trust runner. It needs no cloud access, so it has none.&#10;BLOCKS EVERYTHING DOWNSTREAM &#8212; needs: secret-scan"
+          style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E9F5EC;strokeColor=#2E7D32;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;fontSize=13;fontStyle=1;"
+          vertex="1" parent="1"><mxGeometry x="70" y="415" width="700" height="200" as="geometry"/></mxCell>
+        <mxCell id="j1a" value="actions/checkout@v4&#10;    fetch-depth: 0   &#8592; THE WHOLE HISTORY&#10;&#10;Without this line the scan sees ONE commit, and a&#10;password committed last week and deleted yesterday&#10;is invisible. This one line is the difference between&#10;a working scanner and a decorative one."
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#C77700;fontSize=10;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;"
+          vertex="1" parent="1"><mxGeometry x="90" y="470" width="330" height="130" as="geometry"/></mxCell>
+        <mxCell id="j1b" value="&#9654; gitleaks detect&#10;      --source .&#10;      --config .gitleaks.toml&#10;      --redact&#10;      --report-format sarif&#10;      --exit-code 1        &#8592; THIS IS THE GATE&#10;&#10;&#8594; SARIF to the Security tab, category 'gitleaks'"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDECEC;strokeColor=#B3261E;strokeWidth=3;fontSize=10;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;fontFamily=Courier New;"
+          vertex="1" parent="1"><mxGeometry x="435" y="470" width="315" height="130" as="geometry"/></mxCell>
+
+        <mxCell id="glcfg" value=".gitleaks.toml&#10;&#10;[extend] useDefault = true&#10;   ~170 upstream rules, arrive with releases&#10;&#10;+ private-key-pem&#10;+ db-connection-string-with-password&#10;+ internal-jwt-signing-key&#10;&#10;allowlist: narrow and explicit, by PATH&#10;(a broad allowlist is how a scanner&#10; quietly stops working)"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B3261E;fontSize=10;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;"
+          vertex="1" parent="1"><mxGeometry x="800" y="415" width="330" height="200" as="geometry"/></mxCell>
+
+        <mxCell id="glwhy" value="WHY THE BINARY, NOT gitleaks-action&#10;&#10;On a push the action scans only the pushed commit&#10;RANGE. On a first push that is &lt;first-commit&gt;^..HEAD&#10;and the first commit has no parent. git errors, the&#10;scan covers ZERO bytes, and it still prints&#10;'no leaks found'.&#10;&#10;A scanner that passes while scanning nothing is&#10;worse than no scanner. Found by testing it."
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#C77700;fontSize=10;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;"
+          vertex="1" parent="1"><mxGeometry x="1150" y="415" width="345" height="200" as="geometry"/></mxCell>
+
+        <mxCell id="j2" value="JOB 2 &#8212; iac-scan   matrix [dev, stage, prod]   fail-fast: false   runs-on: [self-hosted, &lt;env&gt;]&#10;Each environment scanned on ITS OWN runner. A PR touching dev never executes on the machine that deploys production."
+          style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E9F5EC;strokeColor=#2E7D32;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;fontSize=13;fontStyle=1;"
+          vertex="1" parent="1"><mxGeometry x="70" y="640" width="1425" height="290" as="geometry"/></mxCell>
+
+        <mxCell id="s1" value="1  python venv + checkov&#10;    PEP 668: Debian 13 refuses&#10;    pip into system Python"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D32;fontSize=10;align=left;spacingLeft=8;"
+          vertex="1" parent="1"><mxGeometry x="90" y="695" width="215" height="60" as="geometry"/></mxCell>
+        <mxCell id="s2" value="2  terraform fmt -check&#10;3  SOPS decrypt&#10;    THIS runner's age key only&#10;4  terraform init + validate"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D32;fontSize=10;align=left;spacingLeft=8;"
+          vertex="1" parent="1"><mxGeometry x="320" y="695" width="215" height="60" as="geometry"/></mxCell>
+
+        <mxCell id="s3" value="5  &#9654; checkov -d terraform/envs/&lt;env&gt;&#10;         --output json  --output-file-path checkov-report  --soft-fail&#10;      checkov -d terraform/envs/&lt;env&gt;&#10;         --output sarif --output-file-path .  --soft-fail&#10;&#10;    continue-on-error: true   +   --soft-fail&#10;    CHECKOV NEVER FAILS THE BUILD. It reports.&#10;    Called TWICE on purpose: JSON &#8594; triage, SARIF &#8594; Security tab&#10;    (the file is results_sarif.sarif, not results.sarif)"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0F0F0;strokeColor=#9AA5B1;dashed=1;fontSize=10;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;fontFamily=Courier New;"
+          vertex="1" parent="1"><mxGeometry x="550" y="695" width="470" height="150" as="geometry"/></mxCell>
+
+        <mxCell id="s4" value="6  &#9654; python scripts/ai_triage.py&#10;         --input checkov-report/results_json.json&#10;         --environment &lt;env&gt;&#10;         --fail-on-blocking      &#8592; THIS IS THE GATE&#10;&#10;    24 findings &#8594; 10 blocking / 5 advisory / 9 noted&#10;    dev = 10 blocking   stage + prod = 14&#10;    The extra 4 are promotion-gated.&#10;    The model only EXPLAINS and ORDERS. It never decides,&#10;    and the gate works with no API key at all."
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDECEC;strokeColor=#B3261E;strokeWidth=3;fontSize=10;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;fontFamily=Courier New;"
+          vertex="1" parent="1"><mxGeometry x="1035" y="695" width="445" height="150" as="geometry"/></mxCell>
+
+        <mxCell id="s5" value="7  Comment on the PR &#8212; one per environment, written pass or fail        8  Enforce the gate &#8212; exit 1 if triage failed"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8EEF7;strokeColor=#4A6FA5;fontSize=11;align=left;spacingLeft=12;"
+          vertex="1" parent="1"><mxGeometry x="90" y="860" width="1390" height="50" as="geometry"/></mxCell>
+
+        <mxCell id="bp" value="BRANCH PROTECTION on main &#8212; 4 required checks green + 1 approving review + branch up to date  &#8594;  MERGE STAYS BLOCKED"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#C77700;fontSize=13;fontStyle=1;align=center;"
+          vertex="1" parent="1"><mxGeometry x="70" y="965" width="1450" height="45" as="geometry"/></mxCell>
+
+        <!-- PHASE B -->
+        <mxCell id="pb" value="PHASE B &#8212; MERGE TO main  (the only path to a deploy)"
+          style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F7FA;strokeColor=#6B4E9E;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;fontSize=14;fontStyle=1;"
+          vertex="1" parent="1"><mxGeometry x="40" y="1035" width="1480" height="1000" as="geometry"/></mxCell>
+
+        <mxCell id="b1" value="gh pr merge 4 --squash --admin --delete-branch&#10;&#8594; push to main fires the workflow again"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#6B4E9E;fontSize=12;fontStyle=1;"
+          vertex="1" parent="1"><mxGeometry x="70" y="1075" width="440" height="55" as="geometry"/></mxCell>
+        <mxCell id="b2" value="gitleaks + checkov + triage run AGAIN on main&#10;(about 90 seconds)"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E9F5EC;strokeColor=#2E7D32;fontSize=12;"
+          vertex="1" parent="1"><mxGeometry x="545" y="1075" width="440" height="55" as="geometry"/></mxCell>
+        <mxCell id="b3" value="JOB 3 &#8212; deploy   max-parallel: 1&#10;dev, then stage, then prod"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#6B4E9E;fontSize=12;fontStyle=1;"
+          vertex="1" parent="1"><mxGeometry x="1020" y="1075" width="440" height="55" as="geometry"/></mxCell>
+
+        <mxCell id="dsteps" value="EVERY deploy job, on its own runner:&#10;&#10;1  actions/checkout@v4&#10;2  SOPS decrypt   &#8594; DB creds AND Proxmox API token&#10;3  terraform init (pg backend)  &#8594; schema deploy_&lt;env&gt;&#10;4  terraform plan -out=tfplan&#10;5  terraform show -json tfplan &gt; plan.json&#10;6  &#9654; policy_check.py --plan plan.json    &#8592; GATE&#10;7  terraform apply tfplan   &#8592; the EXACT plan that was checked&#10;   terraform output"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B4E9E;fontSize=11;align=left;spacingLeft=12;verticalAlign=top;spacingTop=10;fontFamily=Courier New;"
+          vertex="1" parent="1"><mxGeometry x="70" y="1160" width="620" height="215" as="geometry"/></mxCell>
+
+        <mxCell id="pvgap" value="&#9654; policy_check.py &#8212; THE PROXMOX GAP&#10;&#10;Checkov has NO rules for the Proxmox provider. Scanned with&#10;Checkov alone this code passes every check BY BEING UNRECOGNISED&#10;&#8212; the same failure mode as a scanner reading zero bytes.&#10;&#10;So the policy is written directly, and runs against the JSON PLAN,&#10;not the source, so variables are resolved and modules expanded.&#10;&#10;PVE-1  unprivileged        dev &#183; stage &#183; prod&#10;PVE-2  nic firewall        enforced NOWHERE, deliberately, and left&#10;                            in the table so the decision is visible&#10;PVE-3  start on boot       stage &#183; prod&#10;PVE-4  delete protection   PROD ONLY"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDECEC;strokeColor=#B3261E;strokeWidth=3;fontSize=10;align=left;spacingLeft=12;verticalAlign=top;spacingTop=10;"
+          vertex="1" parent="1"><mxGeometry x="720" y="1160" width="740" height="215" as="geometry"/></mxCell>
+
+        <mxCell id="dv" value="Deploy (dev) &#8212; ci-dev&#10;&#10;NO approval. Applies the moment scans pass.&#10;&#8594; CT 301  app-dev-1  10.10.10.20"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E9F5EC;strokeColor=#2E7D32;fontSize=12;align=left;spacingLeft=12;"
+          vertex="1" parent="1"><mxGeometry x="70" y="1410" width="450" height="110" as="geometry"/></mxCell>
+        <mxCell id="sg" value="Deploy (stage) &#8212; ci-stage&#10;&#10;PAUSES &#8212; 'Waiting for review'&#10;A person clicks Approve and deploy.&#10;&#8594; CT 311  app-stage-1  10.20.10.20"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#C77700;fontSize=12;align=left;spacingLeft=12;"
+          vertex="1" parent="1"><mxGeometry x="555" y="1410" width="450" height="110" as="geometry"/></mxCell>
+        <mxCell id="pr" value="Deploy (prod) &#8212; ci-prod&#10;&#10;PAUSES, and cannot start until stage finished.&#10;&#8594; CT 321 / 322 / 323  10.30.10.20 / .21 / .22&#10;protect = TRUE (PVE-4)"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDECEC;strokeColor=#B3261E;fontSize=12;align=left;spacingLeft=12;"
+          vertex="1" parent="1"><mxGeometry x="1035" y="1410" width="450" height="110" as="geometry"/></mxCell>
+
+        <mxCell id="gate" value="THE PROMOTION MODEL &#8212; dev goes out on its own; stage and prod each need a person to say yes.&#10;The gate sits where the cost of being wrong changes."
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#C77700;fontSize=13;fontStyle=1;align=center;"
+          vertex="1" parent="1"><mxGeometry x="70" y="1550" width="1415" height="60" as="geometry"/></mxCell>
+
+        <mxCell id="inst" value="SEPARATE STAGE &#8212; the application install, run from the HOST, not the runner&#10;&#10;/root/install-app.sh &lt;env&gt;&#10;&#10;Terraform builds machines through the Proxmox API and NEVER logs into them.&#10;The runner holds no SSH key for a workload. It IS on the same /24 as its own&#10;containers, so this is separation of duties, not a network impossibility.&#10;What the forward policy blocks is reaching ANOTHER environment."
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#6B4E9E;fontSize=12;align=left;spacingLeft=12;verticalAlign=top;spacingTop=10;"
+          vertex="1" parent="1"><mxGeometry x="70" y="1640" width="680" height="170" as="geometry"/></mxCell>
+        <mxCell id="inst2" value="Per container, only if not already serving:&#10;&#10;1 create service account 'rapta' &#8212; never root&#10;2 install python3 / curl / python3-venv if missing&#10;3 copy release into releases/&lt;version&gt;&#10;4 build a venv inside that release folder&#10;5 move ONE symlink: current &#8594; releases/&lt;version&gt;&#10;6 install the systemd unit, pointing at 'current'&#10;7 wait for /health before reporting success"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B4E9E;fontSize=11;align=left;spacingLeft=12;verticalAlign=top;spacingTop=10;"
+          vertex="1" parent="1"><mxGeometry x="780" y="1640" width="705" height="170" as="geometry"/></mxCell>
+
+        <mxCell id="ver" value="PROOF &#8212; curl -s http://10.30.10.22:8080/  &#8594;  {&quot;host&quot;: &quot;app-prod-3&quot;, &quot;environment&quot;: &quot;prod&quot;, &quot;version&quot;: &quot;1.1.0&quot;}"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E9F5EC;strokeColor=#2E7D32;fontSize=12;align=center;"
+          vertex="1" parent="1"><mxGeometry x="70" y="1840" width="1415" height="45" as="geometry"/></mxCell>
+
+        <mxCell id="tools" value="GITLEAKS vs CHECKOV &#8212; not the same kind of tool&#10;&#10;gitleaks   reads TEXT, in EVERY VERSION of every file   &#183;  finds credentials that EXIST      &#183;  a finding = already an incident, rotate now  &#183;  --exit-code 1, IT IS THE GATE&#10;checkov    reads IaC parsed into a RESOURCE GRAPH      &#183;  finds configurations that are UNSAFE  &#183;  a finding = a proposal, fix before merge     &#183;  --soft-fail, it NEVER gates&#10;&#10;gitleaks tells you something already went wrong. Checkov tells you something is about to."
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F7FA;strokeColor=#4A6FA5;fontSize=11;align=left;spacingLeft=12;verticalAlign=top;spacingTop=10;"
+          vertex="1" parent="1"><mxGeometry x="70" y="1905" width="1415" height="115" as="geometry"/></mxCell>
+
+        <mxCell id="e0" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#4A6FA5;strokeWidth=2;endArrow=block;" edge="1" parent="1" source="pc1" target="a1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#4A6FA5;strokeWidth=2;endArrow=block;" edge="1" parent="1" source="a1" target="j1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" value="needs: secret-scan" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2E7D32;strokeWidth=3;endArrow=block;fontSize=11;" edge="1" parent="1" source="j1" target="j2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#9AA5B1;strokeWidth=2;endArrow=block;dashed=1;" edge="1" parent="1" source="s3" target="s4"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3l" value="JSON" style="edgeLabel;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="e3"><mxGeometry relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#C77700;strokeWidth=2;endArrow=block;" edge="1" parent="1" source="s5" target="bp"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6B4E9E;strokeWidth=2;endArrow=block;" edge="1" parent="1" source="bp" target="b1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6B4E9E;strokeWidth=2;endArrow=block;" edge="1" parent="1" source="b1" target="b2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6B4E9E;strokeWidth=2;endArrow=block;" edge="1" parent="1" source="b2" target="b3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2E7D32;strokeWidth=3;endArrow=block;" edge="1" parent="1" source="dsteps" target="dv"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#C77700;strokeWidth=3;endArrow=block;" edge="1" parent="1" source="dv" target="sg"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#B3261E;strokeWidth=3;endArrow=block;" edge="1" parent="1" source="sg" target="pr"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e11" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6B4E9E;strokeWidth=2;endArrow=block;" edge="1" parent="1" source="gate" target="inst"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e12" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2E7D32;strokeWidth=2;endArrow=block;" edge="1" parent="1" source="inst2" target="ver"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
