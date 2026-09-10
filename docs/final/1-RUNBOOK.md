@@ -115,6 +115,19 @@ The script plus four files: `app.py`, `requirements.txt`, `VERSION`, `inspection
 - Do Not Disturb on, Slack and Mail closed
 - This document on a second screen, not the one I share
 
+## Which window runs what
+
+Two terminals, two machines. Getting this wrong live costs a minute and looks like an outage.
+
+| Command | Window | If run in the other one |
+|---|---|---|
+| `make scan-insecure`, `make scan` | **MAC** | no `.venv` on the host - "command not found" |
+| `/root/demo-secret-persistence.sh` | **SERVER** | the Mac copy may be quarantined by endpoint protection |
+| `gh pr merge 4 ...` | **SERVER** | works on either; the runbook says server so the next commands are already there |
+| `pct list`, `/root/install-app.sh ...` | **SERVER** | `pct` does not exist on the Mac |
+| `curl http://10.30.10.22:8080/` | **SERVER** | from the Mac it hangs 75 s then fails - those networks exist only on the host |
+| `cd /root/secure-iac-pipeline` | **SERVER** | "no such file or directory" on the Mac |
+
 ---
 
 
@@ -730,6 +743,9 @@ able to defend that choice to an engineer who wants to ship and to an auditor wh
 | "Why is teardown not automated?" | An accidental apply rebuilds a server. An accidental destroy is an outage. Destruction is a deliberate act on the runner that owns that environment. |
 | "How do you pick the blocking list?" | Start from what an auditor will ask for, remove anything a developer cannot act on, and keep it short enough that people read it. Ten in dev, fourteen in stage and prod. It is version controlled, so changing it is a reviewed change. |
 | "What is missing?" | Runtime security, image and dependency scanning, disaster recovery of the host itself, and a second engineer to approve. Doc 6 has the honest list. |
+| "How would you autoscale this?" | Today the count is a number in a file, changed by a reviewed pull request - declarative, not automatic. Real autoscaling means workloads appearing with no human in the loop, so the gate has to move from CI to admission: Gatekeeper or Kyverno enforcing the same policies in the cluster. I would add that *before* an autoscaler, not after. And I would scale on queue depth or p95 latency, not CPU, which is the default and the wrong signal for a claims API. |
+| "Why not containers / Docker?" | The real reason to want an image is not scale, it is that an image can be scanned for known vulnerabilities before it runs - Trivy. That is the next gate I would add, and it works with or without Kubernetes. The application here is one Python file; containerising it buys a scannable artifact and nothing else yet. |
+| "What went wrong building it?" | Plenty, and it is written down. The first version put a container on the gateway address because I derived the host octet from the VMID. A single `ping -W 1` against a cold ARP cache told me the gateways were dead when they were fine. Editing a NIC without `hwaddr=` regenerated the MAC and stranded the container. The per-container firewall silently dropped return traffic. Doc 7 has the table. Each one has a general lesson, and each cost real time. |
 
 ## The closing line
 
