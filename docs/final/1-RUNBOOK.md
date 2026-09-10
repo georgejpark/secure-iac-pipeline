@@ -2,377 +2,27 @@
 
 **Private. This document is for me. It is not shared with the panel.**
 
-The document I read while I present. Everything the audience sees is in docs 2 to 7.
+Ordered in the sequence I actually use it, top to bottom. Parts A to D are live.
+Part E is reference I do not read aloud.
 
 Last verified against the live host: **10 September 2026, 11:45 CDT**.
 
----
-
-## Contents
-
-| # | Section | Use it |
+| Part | When | What |
 |---|---|---|
-| 1 | [Introduction](#1--introduction) | The spoken opening |
-| 2 | [Goal of this demo](#2--goal-of-this-demo) | What I am achieving, and what is out of scope |
-| 3 | [System design and architecture](#3--system-design-and-architecture) | Proxmox, GitHub, how they connect and how it was set up |
-| 4 | [The automation workflow, and running the demo](#4--the-automation-workflow-and-running-the-demo) | The flow chart, then STEP 1 to STEP 9 |
-| 5 | [Testing, validation and troubleshooting](#5--testing-validation-and-troubleshooting) | Per environment, and what to do when it breaks |
-| 6 | [Destroying every environment](#6--destroying-every-environment) | Teardown and reset for dev, stage and prod |
-| 7 | [Recap and conclusion](#7--recap-and-conclusion) | The close, and the questions I expect |
+| **A** | T-15 min | Set up the windows, run the five pre-flight checks |
+| **B** | 0-6 min | What I say: the introduction and the goal |
+| **C** | 6-34 min | The demo: running order, panic card, STEP 1 to STEP 9 |
+| **D** | 34-36 min | The close, and the questions I expect |
+| **E** | not live | Reference: architecture, per-environment testing, teardown |
 
-**Diagrams** are draw.io source in `docs/diagrams/`. Open at app.diagrams.net or the VS Code Draw.io extension.
-
-| File | Shows |
-|---|---|
-| `docs/diagrams/01-system-architecture.drawio` | GitHub to Proxmox, four bridges, every container, the state database |
-| `docs/diagrams/02-pipeline-workflow.drawio` | The full Actions automation, pull request through to deployed application |
-| `docs/diagrams/03-destroy-flow.drawio` | Teardown, including the production protection gate |
+**Diagrams**, draw.io source in `docs/diagrams/`:
+`01-system-architecture.drawio` - `02-pipeline-workflow.drawio` - `03-destroy-flow.drawio`
 
 ---
 
-# 1  -  Introduction
+# PART A  -  BEFORE I START          (T-15 min)
 
-They asked for a short introduction before the presentation. About ninety seconds, which leaves room
-for them to ask something. Do not read it word for word, but do not improvise it either.
-
-## What I say
-
-Hi, I'm George Park.
-
-I work in operations and platform engineering. Day to day that means Kubernetes, Terraform, CI/CD
-pipelines, and monitoring, across AWS and GCP.
-
-Most of my career has been the same job in different shapes: keep the platform running, and make the
-safe path the easy path for the engineers using it. If doing the right thing is slower than doing the
-wrong thing, people will do the wrong thing. That is not a discipline problem, it is a design problem.
-
-Most recently I have been the platform lead on a retail analytics product. Backend services, a data
-warehouse behind them, an LLM service alongside. I owned the clusters, the deployment path, the
-observability, and the incident response.
-
-Two things from that job are why I am sitting here.
-
-The first is that I spent a lot of time on the boundary between security and delivery. Access
-control, secret handling, what gets to block a deployment and what does not. That boundary is where
-most of the friction lives, and it is the part I actually enjoy.
-
-The second is an outage. Our ingress controller was running a single replica. Nobody had decided
-that; it was just the default nobody revisited. When the node under it stalled, the whole environment
-went dark. Everything was green right up until it was not.
-
-That taught me the thing I keep coming back to. The dangerous problems are rarely the ones somebody
-did wrong. They are the ones the system quietly made easy to get wrong, and nobody had a reason to
-look.
-
-Today I want to show you one of those. It is about secrets in git, and I found it by accident during
-routine housekeeping.
-
-I have built a working pipeline to demonstrate it. It runs on hardware in my house, it is running
-right now, and I will build production in front of you from nothing.
-
-## If they ask "why Texas Mutual" or "why this role"
-
-> "It is a senior DevSecOps role at a company where security is not a side quest. Workers comp means
-> regulated data, real audit requirements, and a real cost when it goes wrong. I would rather build
-> guardrails somewhere the guardrails matter."
-
-## If they ask what I am like to work with
-
-> "I write things down. Runbooks, incident notes, decision records. Partly so the next person does not
-> have to reconstruct it, and partly because writing it down is how I find out whether I actually
-> understand it."
-
----
-
-# 2  -  Goal of this demo
-
-## The problem, in one line
-
-Companies leak passwords into their code, they notice, they delete the file, and the password is
-still there.
-
-The repository looks clean afterwards. The commit history says somebody handled it. Nobody handled
-it. **That is what I want them to walk away knowing.**
-
-## What I am trying to achieve
-
-**1. Show the problem is real.** Not a slide about it. A password surviving every fix people
-normally apply.
-
-**2. Show a pipeline that stops it.** Running right now, on hardware in my house. Not a diagram.
-
-**3. Show the judgment, not just the tools.** Anyone can install a scanner. The hard part is deciding
-what should stop somebody's work, and being able to defend that list to an engineer and to an
-auditor.
-
-**4. Build infrastructure in front of them.** I change one number, push it, and they watch it go
-through the checks, wait for an approval, and build real servers.
-
-## In scope
-
-- Secret scanning across the whole git history
-- Infrastructure code scanning, with different rules per environment
-- A pull request that cannot merge without a review and passing checks
-- Development deploying automatically, staging and production waiting for a person
-- Terraform building real servers, a separate deploy step installing the application
-- Each environment isolated from the others, three independent ways
-
-## Out of scope, and I say so if asked
-
-- **No Docker, no Kubernetes.** These are Linux containers built by Terraform. I will explain why,
-  and what would change if you ran Kubernetes.
-- **No cloud account.** This runs on a Proxmox server at home instead of AWS. The pipeline is
-  identical; only the last command differs.
-- **No runtime security.** This stops bad things before deployment. It does not watch what happens
-  afterwards.
-- **One person.** I am the only account on this repository, so I cannot approve my own work. In a
-  real team that is a second engineer.
-
-## The starting state today
-
-**This matters and I should say it early.** There are **no application servers running at all**.
-Every one was destroyed with Terraform before the demo started. The platform is up; the thing the
-platform builds is gone.
-
-| Running now | Built during the demo |
-|---|---|
-| 201 ci-dev, 202 ci-stage, 203 ci-prod, 204 tf-state | 301 app-dev-1 |
-| the four bridges and the forward policy | 311 app-stage-1 |
-| the Proxmox API tokens, the age keys | 321, 322, 323 app-prod-1, -2, -3 |
-
-> "Right now there are zero application servers. By the end of this you will have watched the
-> pipeline build five, and production will be three of them because the file says three."
-
----
-
-# 3  -  System design and architecture
-
-**Open `docs/diagrams/01-system-architecture.drawio` on the second screen.**
-
-## The shape of it in one sentence
-
-GitHub schedules the work and holds the approval gate; three Linux containers on a Proxmox box in my
-house pull that work down over an outbound connection and do it; nothing on the internet can reach in.
-
-## The layers, top to bottom
-
-```
-  Developer laptop
-     pre-commit: gitleaks + terraform fmt
-        |  git push
-        v
-  GitHub.com                                 ORCHESTRATION ONLY
-     Actions schedules jobs                  holds NO cloud credential
-     Environments hold the approval gate     NO deploy credential
-     Branch protection blocks the merge      NO network path to anything
-     Security tab shows SARIF
-        |  runners poll OUTBOUND over HTTPS; nothing connects in
-        v
-  Proxmox VE host  pve2  192.168.1.132
-     vmbr0  uplink
-     NAT + forward policy  (runner-net.service)  -- drops every cross-segment packet
-        |
-        +-----------------------+-----------------------+
-        v                       v                       v
-  vmbr1  10.10.10.0/24    vmbr2  10.20.10.0/24    vmbr3  10.30.10.0/24
-  DEV                     STAGE                   PROD
-   .10  ci-dev (201)       .10  ci-stage (202)     .10  ci-prod (203)
-   .20  app-dev-1 (301)    .20  app-stage-1 (311)  .20  app-prod-1 (321)
-                                                    .21  app-prod-2 (322)
-                                                    .22  app-prod-3 (323)
-        |                       |                       |
-        +-----------------------+-----------------------+
-                                |  port 5432 only, own database only
-                                v
-                     vmbr4  10.40.10.0/24  MANAGEMENT
-                       .10  tf-state (204)  PostgreSQL 17
-```
-
-## The GitHub side, and how it is set up
-
-All of this is repository settings, not the workflow file. If they ask "where does that live", it is
-Settings, not code, and that is worth saying because it means it cannot be changed by a pull request.
-
-| Setting | Value | What it enforces |
-|---|---|---|
-| Branch protection on `main` | 4 required checks: Secrets, IaC dev, IaC stage, IaC prod | Nothing merges with a failed scan |
-| | 1 approving review | Nobody merges their own change |
-| | Branch must be up to date | The checks ran against the code that will actually merge |
-| Environments | `dev`, `stage`, `prod`, reviewers on stage and prod | The approval pause in the deploy job |
-| Repository secrets | `ANTHROPIC_API_KEY` only, and it is optional | Triage explains findings in plain English with it, falls back to local rules without it |
-| Runners | three, self-hosted, labels `dev` / `stage` / `prod` | Job routing |
-
-**The absence is the point of the last two rows.** GitHub holds nothing that could create or destroy
-infrastructure. If my GitHub account were compromised, an attacker could schedule jobs. Every
-credential that matters is on a runner behind NAT, on a network they cannot reach.
-
-## The three runners
-
-| Runner | CT | Label | Address | Holds |
-|---|---|---|---|---|
-| ci-dev | 201 | `dev` | 10.10.10.10 on vmbr1 | dev age key, dev database credentials |
-| ci-stage | 202 | `stage` | 10.20.10.10 on vmbr2 | stage age key, stage database credentials |
-| ci-prod | 203 | `prod` | 10.30.10.10 on vmbr3 | prod age key, prod database credentials |
-
-Every job says which runner it wants:
-
-```yaml
-runs-on: [self-hosted, "${{ matrix.environment }}"]
-```
-
-The prod job can only ever land on ci-prod, and ci-prod never receives a dev job. **That one line is
-the isolation boundary.** A pull request that touches dev never executes on the machine that can
-deploy production.
-
-Terraform 1.5.7 and gitleaks 8.30.1 are baked into the container, not downloaded per job, so a build
-cannot silently pick up a newer toolchain than the one that was reviewed.
-
-## Three isolation boundaries, not one
-
-They will ask what stops dev reaching prod. Three answers, each tested in `validate.sh`.
-
-**1. Network.** Each environment is an isolated bridge with no physical port. The host forward policy
-drops every cross-segment packet. `pct exec 201 -- ping 10.30.10.20` fails. Group 6 tests all six
-ordered pairs.
-
-**2. Cryptography.** Each environment's secrets file is encrypted to that environment's age public
-key, and the private key exists only on that runner. Group 7 copies the **prod** encrypted file onto
-the **dev** runner and tries to decrypt it there: `no master key`. That assumes the attacker already
-has the file, which is the stronger test.
-
-**3. Database.** `pg_hba.conf` accepts `tf_prod` only from 10.30.10.0/24. Group 8 hands the dev
-runner the correct prod password and it is still refused, because the source address is checked
-before the password.
-
-> "A single boundary is one mistake away from nothing. Three independent ones mean an attacker needs
-> three independent mistakes."
-
-## Per environment, side by side
-
-| | dev | stage | prod |
-|---|---|---|---|
-| Scanned and deployed by | ci-dev | ci-stage | ci-prod |
-| Deploy trigger | automatic on merge | approval | approval, after stage |
-| State schema | `deploy_dev` | `deploy_stage` | `deploy_prod` |
-| Database, role | `tfstate_dev`, `tf_dev` | `tfstate_stage`, `tf_stage` | `tfstate_prod`, `tf_prod` |
-| Proxmox API token | `terraform@pve!ci-dev` | `terraform@pve!ci-stage` | `terraform@pve!ci-prod` |
-| Replicas | 1 | 1 | 2, becomes 3 today |
-| PVE-1 unprivileged | enforced | enforced | enforced |
-| PVE-3 start on boot | advisory | enforced | enforced |
-| PVE-4 delete protection | advisory | advisory | **enforced** |
-
-## Built by hand versus built by the pipeline
-
-| Built by hand, once | Built by the pipeline, every time |
-|---|---|
-| The four bridges and the forward policy | Every application container |
-| The three runners, their tools, their age keys | Its address, size, boot and protection settings |
-| The state database, its roles, its `pg_hba.conf` | Its SSH keys and resolvers |
-| The Proxmox API tokens | The state record of all of the above |
-| The GitHub Environments and branch protection | |
-
-The left column is the platform. The right column is what the platform exists to build.
-
-## Design decisions I should be ready to defend
-
-**Self-hosted runners.** The infrastructure is on a private network. A GitHub-hosted runner cannot
-reach the Proxmox API or the state database without exposing them to the internet.
-
-**Three runners rather than one.** With one runner, a pull request touching dev executes on the
-machine holding the prod key. That is a privilege escalation path from dev to prod, removed by
-having three.
-
-**State in PostgreSQL, not a file or S3.** The `pg` backend gives real locking through advisory
-locks. Two applies racing each other corrupt state, and that is not theoretical.
-
-**SOPS with age rather than GitHub Secrets.** GitHub Secrets are decrypted by GitHub and injected
-into any job that asks. SOPS files are decrypted by the runner with a key GitHub never sees. A
-compromised GitHub account gets encrypted files it cannot open.
-
-**Policy against the plan, not the source.** The plan has variables resolved and modules expanded. A
-source-level check can be defeated by a default changing in a file it did not look at.
-
-**The saved plan is what gets applied.** `terraform apply tfplan`, not `terraform apply`. What was
-checked is what is built, with no window in between.
-
-**Dev applies automatically; stage and prod wait.** Blocking dev on production-grade controls is how
-a team learns to route around the pipeline. Letting prod apply on merge is how an incident starts.
-The gate goes where the cost of being wrong changes.
-
-**Terraform never logs into a container.** It calls the Proxmox API and stops. The install is a
-separate step run from the host. Narrower than a runner that can do everything, and honest about
-where the boundary is today.
-
----
-
-# 4  -  The automation workflow, and running the demo
-
-**Open `docs/diagrams/02-pipeline-workflow.drawio` on the second screen.**
-
-## The workflow in one picture
-
-```
-  PHASE A  -  PULL REQUEST  (nothing deploys)
-  ------------------------------------------------------------------
-  edit replica_count 2 -> 3, open PR
-        |
-        +--> JOB 1  Secrets      on ci-dev
-        |      checkout fetch-depth: 0   <- the WHOLE history
-        |      gitleaks detect --source .
-        |      upload SARIF
-        |
-        +--> JOB 2  IaC matrix   fail-fast: false
-               +----------------+----------------+----------------+
-               | IaC (dev)      | IaC (stage)    | IaC (prod)     |
-               | on ci-dev      | on ci-stage    | on ci-prod     |
-               | fmt / decrypt / init / validate / checkov /      |
-               | ai_triage.py                                     |
-               | blocking = 10  | blocking = 14  | blocking = 14  |
-               +----------------+----------------+----------------+
-                        |
-                        v
-               3 PR comments, one per environment
-                        |
-                        v
-               BRANCH PROTECTION: 4 checks green + 1 review
-               MERGE STAYS BLOCKED
-  ------------------------------------------------------------------
-
-  PHASE B  -  MERGE TO main  (the only path to a deploy)
-  ------------------------------------------------------------------
-  gh pr merge --squash --admin
-        |
-        v
-  Secrets + IaC x3 run again on main            (~90 seconds)
-        |
-        v
-  JOB 3  Deploy   max-parallel: 1   dev, then stage, then prod
-
-  every deploy job, on its own runner:
-     1 checkout
-     2 SOPS decrypt          -> DB creds AND Proxmox API token
-     3 terraform init        -> schema deploy_<env>
-     4 terraform plan -out=tfplan
-     5 terraform show -json tfplan > plan.json
-     6 policy_check.py --plan plan.json    <- PVE-1/3/4 against the PLAN
-     7 terraform apply tfplan              <- the exact plan that was checked
-       terraform output
-
-  Deploy (dev)    -> NO approval, applies immediately     -> CT 301
-  Deploy (stage)  -> PAUSES, a person approves            -> CT 311
-  Deploy (prod)   -> PAUSES, after stage, person approves -> CT 321, 322, 323
-        |
-        v
-  SEPARATE STAGE, run from the HOST:  /root/install-app.sh <env>
-  ------------------------------------------------------------------
-```
-
-**Why plan, then check, then apply the saved plan.** Checkov has no rules for the Proxmox provider.
-Scanned with Checkov alone, the deploy code passes every check *by being unrecognised*. So the policy
-for it lives in `scripts/policy_check.py` and runs against the JSON of the plan, with variables
-resolved and modules expanded. Then `apply` is handed that same saved file.
-
----
+Do this before anyone joins. Nothing here is spoken.
 
 ## Set up at 1:45
 
@@ -456,6 +106,131 @@ The script plus four files: `app.py`, `requirements.txt`, `VERSION`, `inspection
 
 ---
 
+
+---
+
+# PART B  -  WHAT I SAY               (0-6 min)
+
+Sections 1 and 2 spoken. Nothing shared on screen yet.
+
+
+They asked for a short introduction before the presentation. About ninety seconds, which leaves room
+for them to ask something. Do not read it word for word, but do not improvise it either.
+
+## What I say
+
+Hi, I'm George Park.
+
+I work in operations and platform engineering. Day to day that means Kubernetes, Terraform, CI/CD
+pipelines, and monitoring, across AWS and GCP.
+
+Most of my career has been the same job in different shapes: keep the platform running, and make the
+safe path the easy path for the engineers using it. If doing the right thing is slower than doing the
+wrong thing, people will do the wrong thing. That is not a discipline problem, it is a design problem.
+
+Most recently I have been the platform lead on a retail analytics product. Backend services, a data
+warehouse behind them, an LLM service alongside. I owned the clusters, the deployment path, the
+observability, and the incident response.
+
+Two things from that job are why I am sitting here.
+
+The first is that I spent a lot of time on the boundary between security and delivery. Access
+control, secret handling, what gets to block a deployment and what does not. That boundary is where
+most of the friction lives, and it is the part I actually enjoy.
+
+The second is an outage. Our ingress controller was running a single replica. Nobody had decided
+that; it was just the default nobody revisited. When the node under it stalled, the whole environment
+went dark. Everything was green right up until it was not.
+
+That taught me the thing I keep coming back to. The dangerous problems are rarely the ones somebody
+did wrong. They are the ones the system quietly made easy to get wrong, and nobody had a reason to
+look.
+
+Today I want to show you one of those. It is about secrets in git, and I found it by accident during
+routine housekeeping.
+
+I have built a working pipeline to demonstrate it. It runs on hardware in my house, it is running
+right now, and I will build production in front of you from nothing.
+
+## If they ask "why Texas Mutual" or "why this role"
+
+> "It is a senior DevSecOps role at a company where security is not a side quest. Workers comp means
+> regulated data, real audit requirements, and a real cost when it goes wrong. I would rather build
+> guardrails somewhere the guardrails matter."
+
+## If they ask what I am like to work with
+
+> "I write things down. Runbooks, incident notes, decision records. Partly so the next person does not
+> have to reconstruct it, and partly because writing it down is how I find out whether I actually
+> understand it."
+
+---
+
+
+## The problem, in one line
+
+Companies leak passwords into their code, they notice, they delete the file, and the password is
+still there.
+
+The repository looks clean afterwards. The commit history says somebody handled it. Nobody handled
+it. **That is what I want them to walk away knowing.**
+
+## What I am trying to achieve
+
+**1. Show the problem is real.** Not a slide about it. A password surviving every fix people
+normally apply.
+
+**2. Show a pipeline that stops it.** Running right now, on hardware in my house. Not a diagram.
+
+**3. Show the judgment, not just the tools.** Anyone can install a scanner. The hard part is deciding
+what should stop somebody's work, and being able to defend that list to an engineer and to an
+auditor.
+
+**4. Build infrastructure in front of them.** I change one number, push it, and they watch it go
+through the checks, wait for an approval, and build real servers.
+
+## In scope
+
+- Secret scanning across the whole git history
+- Infrastructure code scanning, with different rules per environment
+- A pull request that cannot merge without a review and passing checks
+- Development deploying automatically, staging and production waiting for a person
+- Terraform building real servers, a separate deploy step installing the application
+- Each environment isolated from the others, three independent ways
+
+## Out of scope, and I say so if asked
+
+- **No Docker, no Kubernetes.** These are Linux containers built by Terraform. I will explain why,
+  and what would change if you ran Kubernetes.
+- **No cloud account.** This runs on a Proxmox server at home instead of AWS. The pipeline is
+  identical; only the last command differs.
+- **No runtime security.** This stops bad things before deployment. It does not watch what happens
+  afterwards.
+- **One person.** I am the only account on this repository, so I cannot approve my own work. In a
+  real team that is a second engineer.
+
+## The starting state today
+
+**This matters and I should say it early.** There are **no application servers running at all**.
+Every one was destroyed with Terraform before the demo started. The platform is up; the thing the
+platform builds is gone.
+
+| Running now | Built during the demo |
+|---|---|
+| 201 ci-dev, 202 ci-stage, 203 ci-prod, 204 tf-state | 301 app-dev-1 |
+| the four bridges and the forward policy | 311 app-stage-1 |
+| the Proxmox API tokens, the age keys | 321, 322, 323 app-prod-1, -2, -3 |
+
+> "Right now there are zero application servers. By the end of this you will have watched the
+> pipeline build five, and production will be three of them because the file says three."
+
+---
+
+
+---
+
+# PART C  -  THE DEMO                 (6-34 min)
+
 ## How the next thirty minutes go
 
 ```
@@ -475,6 +250,35 @@ The script plus four files: `app.py`, `requirements.txt`, `VERSION`, `inspection
 They said they will ask questions while I go. Good. Every interruption is a conversation.
 
 ---
+
+
+---
+
+## PANIC CARD  -  read this before STEP 1, keep it in view
+
+## If something breaks live
+
+**Read the error out loud.** A pipeline that stops a bad change in front of you is better than one
+that quietly works.
+
+**If I do not know:** say so.
+
+
+## If I run out of time
+
+Drop **Step 4**. Say instead: *"the checks block 10 things in development and 14 in production."*
+
+Drop the **production approval** in Step 7. Approve staging only, and show dev and stage.
+
+
+## Never drop
+
+- Step 3, the `git show` moment
+- Step 5, the blocked pull request
+- Step 9, the three closing points
+
+---
+
 
 ## STEP 1  -  Tell the story          (4 min)
 
@@ -772,211 +576,11 @@ to defend that choice to an engineer and to an auditor.
 
 ---
 
-# 5  -  Testing, validation and troubleshooting
-
-## The one command that checks everything
-
-```bash
-ssh root@192.168.1.132 '/root/validate.sh'
-```
-
-Groups 6, 7 and 8 are the three isolation boundaries from section 3. If a panellist asks "how do you
-know dev cannot reach prod", this is the answer, and it runs in front of them.
-
-## Per environment, by hand
-
-| Environment | Container | Address | Health | Identity |
-|---|---|---|---|---|
-| dev | 301 app-dev-1 | 10.10.10.20 | `curl -s http://10.10.10.20:8080/health` | `curl -s http://10.10.10.20:8080/` |
-| stage | 311 app-stage-1 | 10.20.10.20 | `curl -s http://10.20.10.20:8080/health` | `curl -s http://10.20.10.20:8080/` |
-| prod | 321 app-prod-1 | 10.30.10.20 | `curl -s http://10.30.10.20:8080/health` | `curl -s http://10.30.10.20:8080/` |
-| prod | 322 app-prod-2 | 10.30.10.21 | `curl -s http://10.30.10.21:8080/health` | `curl -s http://10.30.10.21:8080/` |
-| prod | 323 app-prod-3 | 10.30.10.22 | `curl -s http://10.30.10.22:8080/health` | `curl -s http://10.30.10.22:8080/` |
-
-**All five at once:**
-
-```bash
-for h in 10.10.10.20 10.20.10.20 10.30.10.20 10.30.10.21 10.30.10.22; do
-  printf "%-14s " $h; curl -s --max-time 5 http://$h:8080/health || echo "NO ANSWER"; echo
-done
-```
-
-**The three endpoints each container serves:**
-
-| Endpoint | Returns | Note |
-|---|---|---|
-| `/health` | `{"status": "ok"}` | 503 for the first two seconds after start, on purpose |
-| `/version` | `{"version": "1.1.0"}` | what `install-app.sh` reads to decide whether to skip |
-| `/` | the greeting, environment, host, version | reads its environment from its own hostname |
-
-## Inside a container, when one is misbehaving
-
-```bash
-pct exec 321 -- systemctl status inspection-service --no-pager -l
-pct exec 321 -- journalctl -u inspection-service -n 50 --no-pager
-pct exec 321 -- ls -l /opt/rapta/inspection/
-pct exec 321 -- curl -s http://127.0.0.1:8080/health
-```
-
-## Troubleshooting
-
-| Symptom | Almost always | Fix |
-|---|---|---|
-| `terraform init` fails, `connection refused` on 10.40.10.10:5432 | Postgres bound loopback only after a tf-state restart | `pct exec 204 -- systemctl restart postgresql@17-main`, then confirm with `ss -tlnp \| grep 5432` |
-| `curl` refused from the **host** prompt on 127.0.0.1:8080 | Wrong machine. Nothing listens on the Proxmox host | Use the container address, `10.x.10.20` |
-| `curl` refused from my **Mac** | Those networks only exist on the Proxmox host | Run it over `ssh root@192.168.1.132` |
-| Install script says `DID NOT COME UP` | The service failed, or the health check fired too early | It prints the status underneath. Run it again; it is safe to repeat and retries only the failed container |
-| `Error: Container delete` on a destroy | `protection: 1` on a prod container | Section 6. Clear it, then re-run the destroy |
-| Deploy job never starts | The runner for that environment is offline | `pct exec 20X -- systemctl status "actions.runner.*"` |
-| A job lands on the wrong runner | A label is missing on a runner | Check labels in GitHub Settings, Actions, Runners |
-| A flaky check in Actions | Pre-existing, unrelated to the change | Re-run the failed job from the Actions UI |
-| Command not found | Wrong machine. Step 4 is my Mac, everything else is the server | |
-
-## If something breaks live
-
-**Read the error out loud.** A pipeline that stops a bad change in front of you is better than one
-that quietly works.
-
-**If I do not know:** say so.
-
-## If I run out of time
-
-Drop **Step 4**. Say instead: *"the checks block 10 things in development and 14 in production."*
-
-Drop the **production approval** in Step 7. Approve staging only, and show dev and stage.
-
-## Never drop
-
-- Step 3, the `git show` moment
-- Step 5, the blocked pull request
-- Step 9, the three closing points
 
 ---
 
-# 6  -  Destroying every environment
+# PART D  -  THE CLOSE
 
-**Open `docs/diagrams/03-destroy-flow.drawio`.**
-
-This is how the environment was reset before today's demo, and how to reset it again afterwards.
-
-## There is no destroy button in the pipeline, and that is deliberate
-
-`security-pipeline.yml` only ever runs `terraform apply`. Destruction is not something CI should be
-able to do as a side effect of a merge. **Teardown is a deliberate, manual act, performed on the
-runner that already owns that environment's key, state and API token.**
-
-If a panellist asks why teardown is not automated: the blast radius of an accidental `apply` is a
-rebuilt server. The blast radius of an accidental `destroy` is an outage.
-
-## Before you start
-
-```bash
-pct exec 204 -- ss -tlnp | grep 5432        # must show 10.40.10.10:5432
-```
-
-## The procedure, per environment
-
-Run each on its own runner. dev on 201, stage on 202, prod on 203.
-
-There is a helper on the host at `/root/tf-destroy.sh`, pushed into each runner at
-`/home/runner/tf-destroy.sh`. It takes the environment and either `plan` or `destroy`:
-
-```bash
-# 1. See what would go. ALWAYS do this first.
-pct exec 201 -- su - runner -c "/home/runner/tf-destroy.sh dev   plan"
-pct exec 202 -- su - runner -c "/home/runner/tf-destroy.sh stage plan"
-pct exec 203 -- su - runner -c "/home/runner/tf-destroy.sh prod  plan"
-```
-
-Expect exactly:
-
-```
-dev     Plan: 0 to add, 0 to change, 1 to destroy.
-stage   Plan: 0 to add, 0 to change, 1 to destroy.
-prod    Plan: 0 to add, 0 to change, 2 to destroy.
-```
-
-**If the counts differ, stop and find out why before destroying anything.**
-
-```bash
-# 2. Destroy dev and stage.
-pct exec 201 -- su - runner -c "/home/runner/tf-destroy.sh dev   destroy"
-pct exec 202 -- su - runner -c "/home/runner/tf-destroy.sh stage destroy"
-
-# 3. PRODUCTION ONLY - clear delete protection first.
-pct set 321 --protection 0
-pct set 322 --protection 0
-pct set 323 --protection 0        # only if 323 exists
-
-# 4. Destroy prod.
-pct exec 203 -- su - runner -c "/home/runner/tf-destroy.sh prod destroy"
-```
-
-### Why step 3 exists
-
-Production sets `protect = true`, which is policy **PVE-4**. Without clearing it, Terraform stops the
-containers and then fails:
-
-```
-Error: Container delete
-```
-
-The provider does not clear that attribute for itself on destroy. **This is the guardrail doing
-exactly its job**, and it is worth saying out loud if it happens in front of anyone:
-
-> "Production refused to be deleted by automation. A human had to disarm it on purpose. That is the
-> difference between dev and prod in one error message."
-
-## What the helper script does
-
-Same shape as the pipeline's deploy job, with `destroy` on the end:
-
-```
-cd terraform/deploy/<env>
-SOPS decrypt ../../envs/<env>/secrets.enc.yaml   -- with THIS runner's age key only
-build conn_str from the decrypted values
-terraform init -reconfigure -backend-config=...  -- schema deploy_<env>
-export TF_VAR_pve_endpoint / pve_token_id / pve_token_secret
-terraform plan -destroy      or      terraform destroy -auto-approve
-```
-
-It never echoes a decrypted value.
-
-## Verify the teardown
-
-```bash
-for c in 201:dev 202:stage 203:prod; do id=${c%%:*}; env=${c##*:}
-  printf "%-6s " "$env"
-  pct exec $id -- su - runner -c "cd /home/runner/actions-runner/_work/secure-iac-pipeline/secure-iac-pipeline/terraform/deploy/$env && terraform state list | wc -l"
-done
-
-pct list
-for v in 301 311 321 322 323; do pct list | grep -q "^$v " && echo "$v IN USE" || echo "$v free"; done
-```
-
-Three zeros, four platform containers, five free VMIDs.
-
-## What teardown does not touch
-
-The four bridges and the forward policy. The three runners, their tools and their age keys. The state
-database, its roles and `pg_hba.conf`. The Proxmox API tokens. The GitHub Environments and branch
-protection. `/opt/app-source` and `/root/install-app.sh` on the host.
-
-That is the platform column from section 3. **Teardown only ever removes what the pipeline built.**
-
-## Rebuilding after a teardown
-
-**Through the pipeline**, which is what the demo does: merge to `main`, or use **workflow_dispatch**
-in the Actions tab and pick one environment. That is the lever for re-applying a single environment
-cleanly.
-
-**Directly on a runner**, for a rehearsal when you do not want to burn a merge: same decrypt and init
-as the helper script, then `terraform apply -auto-approve`. Then install the application from the
-host with `/root/install-app.sh <env>`.
-
----
-
-# 7  -  Recap and conclusion
 
 ## What they just watched
 
@@ -1021,7 +625,440 @@ able to defend that choice to an engineer who wants to ship and to an auditor wh
 
 ---
 
-## Post-demo reset
+
+---
+
+# PART E  -  REFERENCE  (not read live)
+
+Everything below is for answering questions, for teardown afterwards, and for
+rehearsal. None of it is part of the spoken flow.
+
+---
+
+## E1  -  System design and architecture
+
+
+**Open `docs/diagrams/01-system-architecture.drawio` on the second screen.**
+
+### The shape of it in one sentence
+
+GitHub schedules the work and holds the approval gate; three Linux containers on a Proxmox box in my
+house pull that work down over an outbound connection and do it; nothing on the internet can reach in.
+
+### The layers, top to bottom
+
+```
+  Developer laptop
+     pre-commit: gitleaks + terraform fmt
+        |  git push
+        v
+  GitHub.com                                 ORCHESTRATION ONLY
+     Actions schedules jobs                  holds NO cloud credential
+     Environments hold the approval gate     NO deploy credential
+     Branch protection blocks the merge      NO network path to anything
+     Security tab shows SARIF
+        |  runners poll OUTBOUND over HTTPS; nothing connects in
+        v
+  Proxmox VE host  pve2  192.168.1.132
+     vmbr0  uplink
+     NAT + forward policy  (runner-net.service)  -- drops every cross-segment packet
+        |
+        +-----------------------+-----------------------+
+        v                       v                       v
+  vmbr1  10.10.10.0/24    vmbr2  10.20.10.0/24    vmbr3  10.30.10.0/24
+  DEV                     STAGE                   PROD
+   .10  ci-dev (201)       .10  ci-stage (202)     .10  ci-prod (203)
+   .20  app-dev-1 (301)    .20  app-stage-1 (311)  .20  app-prod-1 (321)
+                                                    .21  app-prod-2 (322)
+                                                    .22  app-prod-3 (323)
+        |                       |                       |
+        +-----------------------+-----------------------+
+                                |  port 5432 only, own database only
+                                v
+                     vmbr4  10.40.10.0/24  MANAGEMENT
+                       .10  tf-state (204)  PostgreSQL 17
+```
+
+### The GitHub side, and how it is set up
+
+All of this is repository settings, not the workflow file. If they ask "where does that live", it is
+Settings, not code, and that is worth saying because it means it cannot be changed by a pull request.
+
+| Setting | Value | What it enforces |
+|---|---|---|
+| Branch protection on `main` | 4 required checks: Secrets, IaC dev, IaC stage, IaC prod | Nothing merges with a failed scan |
+| | 1 approving review | Nobody merges their own change |
+| | Branch must be up to date | The checks ran against the code that will actually merge |
+| Environments | `dev`, `stage`, `prod`, reviewers on stage and prod | The approval pause in the deploy job |
+| Repository secrets | `ANTHROPIC_API_KEY` only, and it is optional | Triage explains findings in plain English with it, falls back to local rules without it |
+| Runners | three, self-hosted, labels `dev` / `stage` / `prod` | Job routing |
+
+**The absence is the point of the last two rows.** GitHub holds nothing that could create or destroy
+infrastructure. If my GitHub account were compromised, an attacker could schedule jobs. Every
+credential that matters is on a runner behind NAT, on a network they cannot reach.
+
+### The three runners
+
+| Runner | CT | Label | Address | Holds |
+|---|---|---|---|---|
+| ci-dev | 201 | `dev` | 10.10.10.10 on vmbr1 | dev age key, dev database credentials |
+| ci-stage | 202 | `stage` | 10.20.10.10 on vmbr2 | stage age key, stage database credentials |
+| ci-prod | 203 | `prod` | 10.30.10.10 on vmbr3 | prod age key, prod database credentials |
+
+Every job says which runner it wants:
+
+```yaml
+runs-on: [self-hosted, "${{ matrix.environment }}"]
+```
+
+The prod job can only ever land on ci-prod, and ci-prod never receives a dev job. **That one line is
+the isolation boundary.** A pull request that touches dev never executes on the machine that can
+deploy production.
+
+Terraform 1.5.7 and gitleaks 8.30.1 are baked into the container, not downloaded per job, so a build
+cannot silently pick up a newer toolchain than the one that was reviewed.
+
+### Three isolation boundaries, not one
+
+They will ask what stops dev reaching prod. Three answers, each tested in `validate.sh`.
+
+**1. Network.** Each environment is an isolated bridge with no physical port. The host forward policy
+drops every cross-segment packet. `pct exec 201 -- ping 10.30.10.20` fails. Group 6 tests all six
+ordered pairs.
+
+**2. Cryptography.** Each environment's secrets file is encrypted to that environment's age public
+key, and the private key exists only on that runner. Group 7 copies the **prod** encrypted file onto
+the **dev** runner and tries to decrypt it there: `no master key`. That assumes the attacker already
+has the file, which is the stronger test.
+
+**3. Database.** `pg_hba.conf` accepts `tf_prod` only from 10.30.10.0/24. Group 8 hands the dev
+runner the correct prod password and it is still refused, because the source address is checked
+before the password.
+
+> "A single boundary is one mistake away from nothing. Three independent ones mean an attacker needs
+> three independent mistakes."
+
+### Per environment, side by side
+
+| | dev | stage | prod |
+|---|---|---|---|
+| Scanned and deployed by | ci-dev | ci-stage | ci-prod |
+| Deploy trigger | automatic on merge | approval | approval, after stage |
+| State schema | `deploy_dev` | `deploy_stage` | `deploy_prod` |
+| Database, role | `tfstate_dev`, `tf_dev` | `tfstate_stage`, `tf_stage` | `tfstate_prod`, `tf_prod` |
+| Proxmox API token | `terraform@pve!ci-dev` | `terraform@pve!ci-stage` | `terraform@pve!ci-prod` |
+| Replicas | 1 | 1 | 2, becomes 3 today |
+| PVE-1 unprivileged | enforced | enforced | enforced |
+| PVE-3 start on boot | advisory | enforced | enforced |
+| PVE-4 delete protection | advisory | advisory | **enforced** |
+
+### Built by hand versus built by the pipeline
+
+| Built by hand, once | Built by the pipeline, every time |
+|---|---|
+| The four bridges and the forward policy | Every application container |
+| The three runners, their tools, their age keys | Its address, size, boot and protection settings |
+| The state database, its roles, its `pg_hba.conf` | Its SSH keys and resolvers |
+| The Proxmox API tokens | The state record of all of the above |
+| The GitHub Environments and branch protection | |
+
+The left column is the platform. The right column is what the platform exists to build.
+
+### Design decisions I should be ready to defend
+
+**Self-hosted runners.** The infrastructure is on a private network. A GitHub-hosted runner cannot
+reach the Proxmox API or the state database without exposing them to the internet.
+
+**Three runners rather than one.** With one runner, a pull request touching dev executes on the
+machine holding the prod key. That is a privilege escalation path from dev to prod, removed by
+having three.
+
+**State in PostgreSQL, not a file or S3.** The `pg` backend gives real locking through advisory
+locks. Two applies racing each other corrupt state, and that is not theoretical.
+
+**SOPS with age rather than GitHub Secrets.** GitHub Secrets are decrypted by GitHub and injected
+into any job that asks. SOPS files are decrypted by the runner with a key GitHub never sees. A
+compromised GitHub account gets encrypted files it cannot open.
+
+**Policy against the plan, not the source.** The plan has variables resolved and modules expanded. A
+source-level check can be defeated by a default changing in a file it did not look at.
+
+**The saved plan is what gets applied.** `terraform apply tfplan`, not `terraform apply`. What was
+checked is what is built, with no window in between.
+
+**Dev applies automatically; stage and prod wait.** Blocking dev on production-grade controls is how
+a team learns to route around the pipeline. Letting prod apply on merge is how an incident starts.
+The gate goes where the cost of being wrong changes.
+
+**Terraform never logs into a container.** It calls the Proxmox API and stops. The install is a
+separate step run from the host. Narrower than a runner that can do everything, and honest about
+where the boundary is today.
+
+---
+
+
+---
+
+## E2  -  The automation workflow in one picture
+
+### The workflow in one picture
+
+```
+  PHASE A  -  PULL REQUEST  (nothing deploys)
+  ------------------------------------------------------------------
+  edit replica_count 2 -> 3, open PR
+        |
+        +--> JOB 1  Secrets      on ci-dev
+        |      checkout fetch-depth: 0   <- the WHOLE history
+        |      gitleaks detect --source .
+        |      upload SARIF
+        |
+        +--> JOB 2  IaC matrix   fail-fast: false
+               +----------------+----------------+----------------+
+               | IaC (dev)      | IaC (stage)    | IaC (prod)     |
+               | on ci-dev      | on ci-stage    | on ci-prod     |
+               | fmt / decrypt / init / validate / checkov /      |
+               | ai_triage.py                                     |
+               | blocking = 10  | blocking = 14  | blocking = 14  |
+               +----------------+----------------+----------------+
+                        |
+                        v
+               3 PR comments, one per environment
+                        |
+                        v
+               BRANCH PROTECTION: 4 checks green + 1 review
+               MERGE STAYS BLOCKED
+  ------------------------------------------------------------------
+
+  PHASE B  -  MERGE TO main  (the only path to a deploy)
+  ------------------------------------------------------------------
+  gh pr merge --squash --admin
+        |
+        v
+  Secrets + IaC x3 run again on main            (~90 seconds)
+        |
+        v
+  JOB 3  Deploy   max-parallel: 1   dev, then stage, then prod
+
+  every deploy job, on its own runner:
+     1 checkout
+     2 SOPS decrypt          -> DB creds AND Proxmox API token
+     3 terraform init        -> schema deploy_<env>
+     4 terraform plan -out=tfplan
+     5 terraform show -json tfplan > plan.json
+     6 policy_check.py --plan plan.json    <- PVE-1/3/4 against the PLAN
+     7 terraform apply tfplan              <- the exact plan that was checked
+       terraform output
+
+  Deploy (dev)    -> NO approval, applies immediately     -> CT 301
+  Deploy (stage)  -> PAUSES, a person approves            -> CT 311
+  Deploy (prod)   -> PAUSES, after stage, person approves -> CT 321, 322, 323
+        |
+        v
+  SEPARATE STAGE, run from the HOST:  /root/install-app.sh <env>
+  ------------------------------------------------------------------
+```
+
+**Why plan, then check, then apply the saved plan.** Checkov has no rules for the Proxmox provider.
+Scanned with Checkov alone, the deploy code passes every check *by being unrecognised*. So the policy
+for it lives in `scripts/policy_check.py` and runs against the JSON of the plan, with variables
+resolved and modules expanded. Then `apply` is handed that same saved file.
+
+---
+
+
+---
+
+## E3  -  Testing, validation and troubleshooting
+
+
+### The one command that checks everything
+
+```bash
+ssh root@192.168.1.132 '/root/validate.sh'
+```
+
+Groups 6, 7 and 8 are the three isolation boundaries from section 3. If a panellist asks "how do you
+know dev cannot reach prod", this is the answer, and it runs in front of them.
+
+### Per environment, by hand
+
+| Environment | Container | Address | Health | Identity |
+|---|---|---|---|---|
+| dev | 301 app-dev-1 | 10.10.10.20 | `curl -s http://10.10.10.20:8080/health` | `curl -s http://10.10.10.20:8080/` |
+| stage | 311 app-stage-1 | 10.20.10.20 | `curl -s http://10.20.10.20:8080/health` | `curl -s http://10.20.10.20:8080/` |
+| prod | 321 app-prod-1 | 10.30.10.20 | `curl -s http://10.30.10.20:8080/health` | `curl -s http://10.30.10.20:8080/` |
+| prod | 322 app-prod-2 | 10.30.10.21 | `curl -s http://10.30.10.21:8080/health` | `curl -s http://10.30.10.21:8080/` |
+| prod | 323 app-prod-3 | 10.30.10.22 | `curl -s http://10.30.10.22:8080/health` | `curl -s http://10.30.10.22:8080/` |
+
+**All five at once:**
+
+```bash
+for h in 10.10.10.20 10.20.10.20 10.30.10.20 10.30.10.21 10.30.10.22; do
+  printf "%-14s " $h; curl -s --max-time 5 http://$h:8080/health || echo "NO ANSWER"; echo
+done
+```
+
+**The three endpoints each container serves:**
+
+| Endpoint | Returns | Note |
+|---|---|---|
+| `/health` | `{"status": "ok"}` | 503 for the first two seconds after start, on purpose |
+| `/version` | `{"version": "1.1.0"}` | what `install-app.sh` reads to decide whether to skip |
+| `/` | the greeting, environment, host, version | reads its environment from its own hostname |
+
+### Inside a container, when one is misbehaving
+
+```bash
+pct exec 321 -- systemctl status inspection-service --no-pager -l
+pct exec 321 -- journalctl -u inspection-service -n 50 --no-pager
+pct exec 321 -- ls -l /opt/rapta/inspection/
+pct exec 321 -- curl -s http://127.0.0.1:8080/health
+```
+
+### Troubleshooting
+
+| Symptom | Almost always | Fix |
+|---|---|---|
+| `terraform init` fails, `connection refused` on 10.40.10.10:5432 | Postgres bound loopback only after a tf-state restart | `pct exec 204 -- systemctl restart postgresql@17-main`, then confirm with `ss -tlnp \| grep 5432` |
+| `curl` refused from the **host** prompt on 127.0.0.1:8080 | Wrong machine. Nothing listens on the Proxmox host | Use the container address, `10.x.10.20` |
+| `curl` refused from my **Mac** | Those networks only exist on the Proxmox host | Run it over `ssh root@192.168.1.132` |
+| Install script says `DID NOT COME UP` | The service failed, or the health check fired too early | It prints the status underneath. Run it again; it is safe to repeat and retries only the failed container |
+| `Error: Container delete` on a destroy | `protection: 1` on a prod container | Section 6. Clear it, then re-run the destroy |
+| Deploy job never starts | The runner for that environment is offline | `pct exec 20X -- systemctl status "actions.runner.*"` |
+| A job lands on the wrong runner | A label is missing on a runner | Check labels in GitHub Settings, Actions, Runners |
+| A flaky check in Actions | Pre-existing, unrelated to the change | Re-run the failed job from the Actions UI |
+| Command not found | Wrong machine. Step 4 is my Mac, everything else is the server | |
+
+
+---
+
+## E4  -  Destroying every environment
+
+
+**Open `docs/diagrams/03-destroy-flow.drawio`.**
+
+This is how the environment was reset before today's demo, and how to reset it again afterwards.
+
+### There is no destroy button in the pipeline, and that is deliberate
+
+`security-pipeline.yml` only ever runs `terraform apply`. Destruction is not something CI should be
+able to do as a side effect of a merge. **Teardown is a deliberate, manual act, performed on the
+runner that already owns that environment's key, state and API token.**
+
+If a panellist asks why teardown is not automated: the blast radius of an accidental `apply` is a
+rebuilt server. The blast radius of an accidental `destroy` is an outage.
+
+### Before you start
+
+```bash
+pct exec 204 -- ss -tlnp | grep 5432        # must show 10.40.10.10:5432
+```
+
+### The procedure, per environment
+
+Run each on its own runner. dev on 201, stage on 202, prod on 203.
+
+There is a helper on the host at `/root/tf-destroy.sh`, pushed into each runner at
+`/home/runner/tf-destroy.sh`. It takes the environment and either `plan` or `destroy`:
+
+```bash
+pct exec 201 -- su - runner -c "/home/runner/tf-destroy.sh dev   plan"
+pct exec 202 -- su - runner -c "/home/runner/tf-destroy.sh stage plan"
+pct exec 203 -- su - runner -c "/home/runner/tf-destroy.sh prod  plan"
+```
+
+Expect exactly:
+
+```
+dev     Plan: 0 to add, 0 to change, 1 to destroy.
+stage   Plan: 0 to add, 0 to change, 1 to destroy.
+prod    Plan: 0 to add, 0 to change, 2 to destroy.
+```
+
+**If the counts differ, stop and find out why before destroying anything.**
+
+```bash
+pct exec 201 -- su - runner -c "/home/runner/tf-destroy.sh dev   destroy"
+pct exec 202 -- su - runner -c "/home/runner/tf-destroy.sh stage destroy"
+
+pct set 321 --protection 0
+pct set 322 --protection 0
+pct set 323 --protection 0        # only if 323 exists
+
+pct exec 203 -- su - runner -c "/home/runner/tf-destroy.sh prod destroy"
+```
+
+### Why step 3 exists
+
+Production sets `protect = true`, which is policy **PVE-4**. Without clearing it, Terraform stops the
+containers and then fails:
+
+```
+Error: Container delete
+```
+
+The provider does not clear that attribute for itself on destroy. **This is the guardrail doing
+exactly its job**, and it is worth saying out loud if it happens in front of anyone:
+
+> "Production refused to be deleted by automation. A human had to disarm it on purpose. That is the
+> difference between dev and prod in one error message."
+
+### What the helper script does
+
+Same shape as the pipeline's deploy job, with `destroy` on the end:
+
+```
+cd terraform/deploy/<env>
+SOPS decrypt ../../envs/<env>/secrets.enc.yaml   -- with THIS runner's age key only
+build conn_str from the decrypted values
+terraform init -reconfigure -backend-config=...  -- schema deploy_<env>
+export TF_VAR_pve_endpoint / pve_token_id / pve_token_secret
+terraform plan -destroy      or      terraform destroy -auto-approve
+```
+
+It never echoes a decrypted value.
+
+### Verify the teardown
+
+```bash
+for c in 201:dev 202:stage 203:prod; do id=${c%%:*}; env=${c##*:}
+  printf "%-6s " "$env"
+  pct exec $id -- su - runner -c "cd /home/runner/actions-runner/_work/secure-iac-pipeline/secure-iac-pipeline/terraform/deploy/$env && terraform state list | wc -l"
+done
+
+pct list
+for v in 301 311 321 322 323; do pct list | grep -q "^$v " && echo "$v IN USE" || echo "$v free"; done
+```
+
+Three zeros, four platform containers, five free VMIDs.
+
+### What teardown does not touch
+
+The four bridges and the forward policy. The three runners, their tools and their age keys. The state
+database, its roles and `pg_hba.conf`. The Proxmox API tokens. The GitHub Environments and branch
+protection. `/opt/app-source` and `/root/install-app.sh` on the host.
+
+That is the platform column from section 3. **Teardown only ever removes what the pipeline built.**
+
+### Rebuilding after a teardown
+
+**Through the pipeline**, which is what the demo does: merge to `main`, or use **workflow_dispatch**
+in the Actions tab and pick one environment. That is the lever for re-applying a single environment
+cleanly.
+
+**Directly on a runner**, for a rehearsal when you do not want to burn a merge: same decrypt and init
+as the helper script, then `terraform apply -auto-approve`. Then install the application from the
+host with `/root/install-app.sh <env>`.
+
+---
+
+
+---
+
+## E5  -  Post-demo reset
+
+### Post-demo reset
 
 1. Tear everything down, section 6.
 2. Re-open the pull request, or create a new branch that changes `replica_count` back to 2 and then
