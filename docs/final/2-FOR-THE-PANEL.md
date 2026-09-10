@@ -87,11 +87,29 @@ That's it. One number in one file goes from `2` to `3`.
 git clone git@github.com:georgejpark/secure-iac-pipeline.git
 ```
 
+**What is happening:** a full copy of the repository lands on my laptop - every file, and every
+version of every file that has ever been committed.
+
+**Why it matters for this story:** that second part is the point of the whole demo. A clone is not
+a snapshot of today. It is the entire history. Anything that was ever committed comes with it,
+including things that were later deleted.
+
+**What to notice:** there are no credentials in this clone. No cloud keys, no database passwords.
+The encrypted secrets files are here, but nothing on my laptop can open them.
+
 ## 2. Make a branch
 
 ```bash
 git checkout -b demo/TM-118-third-production-server
 ```
+
+**What is happening:** my change gets its own name. `TM-118` is the ticket. Everything I do next
+happens on this branch, and `main` does not move.
+
+**Why:** `main` is what production is built from. If nobody can commit to it directly, then
+everything that reaches production has been through the pull request, and the pull request is where
+every check and every approval lives. Branch protection enforces this - even I, as the
+administrator, get a warning when I bypass it, and GitHub records that I did.
 
 Never work directly on `main`.
 
@@ -103,6 +121,17 @@ File: `terraform/deploy/prod/main.tf`
 replica_count = 2      becomes      replica_count = 3
 ```
 
+**What is happening:** the file describes what production should look like. Not how to build it -
+what it should be. Two servers becomes three. Terraform's job is to make reality match the file.
+
+**Why it is one number:** all three environments use the same module - the same definition of what
+a server is. Each environment passes in only the things allowed to differ: how many, how big, which
+network, whether it restarts after a reboot, whether it can be deleted. A security setting cannot be
+on in production and quietly off in development, because there is only one place it is written.
+
+**What to notice:** the diff the reviewer sees is one line. That is deliberate. A change that is easy
+to read is a change that gets reviewed properly.
+
 Development and staging have their own files. They aren't affected.
 
 ## 4. Commit
@@ -111,9 +140,19 @@ Development and staging have their own files. They aren't affected.
 git commit -m "TM-118: add a third production server"
 ```
 
-Before this saves, a hook runs. It looks for passwords and API keys.
+**What is happening:** before Git records the change, a pre-commit hook runs on my laptop. It runs
+gitleaks - the same secret scanner the pipeline uses, with the same configuration - plus
+`terraform fmt` and `terraform validate`.
+
+**Why here, and not only in the pipeline:** this is the cheapest gate there is. A password caught
+here has never been committed. There is nothing to rotate, no history to rewrite, no incident. The
+same password caught one step later, in the pipeline, is already in a commit that has been pushed to
+GitHub, and that is a different day.
 
 If it finds one, the commit doesn't happen. Nothing has left my laptop.
+
+**What to notice:** the hook and the pipeline run the same tool. "It passed on my machine" means the
+same thing as "it passed in CI".
 
 ## 5. Push
 
@@ -121,13 +160,26 @@ If it finds one, the commit doesn't happen. Nothing has left my laptop.
 git push -u origin demo/TM-118-third-production-server
 ```
 
-The branch now exists on GitHub. Nothing has run yet.
+**What is happening:** the branch is copied to GitHub. The change has left my laptop and is now
+visible to the team.
+
+**What has not happened:** nothing has run. The pipeline is triggered by pull requests and by
+merges to `main`, not by pushes to a branch. A push is publishing a draft; nothing has been asked
+to judge it yet.
 
 ## 6. Open a pull request
 
 ```bash
 gh pr create --base main
 ```
+
+**What is happening:** I am asking for this branch to be merged into `main`. That request is the
+pull request, and it is the unit everything else attaches to: the checks, the comments, the review,
+the approval, and the record of who merged it.
+
+**Why this is the trigger:** opening a pull request is a statement that the change is ready to be
+judged. From this moment the pipeline runs on every push to the branch, and the merge button stays
+disabled until every required check is green and a reviewer has approved.
 
 This is what starts the pipeline.
 
@@ -211,7 +263,7 @@ checkov -d terraform/envs/<environment> --soft-fail
 ```
 
 `--soft-fail` means **Checkov itself never fails the job.** It reports. The decision is made in
-step 8. That is deliberate: a scanner that fails the build on every finding gets switched off.
+step 9. That is deliberate: a scanner that fails the build on every finding gets switched off.
 
 **Examples of what Checkov finds:**
 
@@ -231,7 +283,7 @@ The extra four are things development is allowed to skip: deletion protection, m
 export, enhanced monitoring. Losing a development box costs an afternoon.
 
 Against the real code in this pull request, Checkov still reports findings - 9 in production, 11 in
-development - but **none is on the blocking list**. That is why the checks are green, and why step 8
+development - but **none is on the blocking list**. That is why the checks are green, and why step 9
 exists.
 
 **Check it yourself:**
@@ -278,7 +330,7 @@ Then open **IaC (dev)** and compare the runner name in the log header. Different
 **Why it exists:** Checkov finds 24 problems in 110 lines of code. Nobody reads 24 findings. They
 turn the tool off instead.
 
-**What it reads:** Checkov's JSON output from step 7.
+**What it reads:** Checkov's JSON output from step 8.
 
 **What it does:**
 
@@ -330,6 +382,16 @@ It says:
 BLOCKED - Review required
 ```
 
+**What is happening:** every check is green - secrets, and the infrastructure scan for all three
+environments - and the merge button is still disabled.
+
+**Why:** the checks are not the only gate. Branch protection on `main` requires four green checks
+*and* one approving review from someone who is not the author. A scanner can tell you the code is
+not obviously dangerous. It cannot tell you the change is the right one.
+
+**What to notice:** the four required checks are named in the repository settings, not in the
+workflow file. A pull request cannot edit its own gate.
+
 ## 11. Somebody approves it
 
 I cannot approve my own pull request. GitHub refuses:
@@ -340,21 +402,64 @@ Can not approve your own pull request
 
 Someone else has to look at it.
 
+**What the reviewer has in front of them:** a one-line diff, three pipeline comments explaining
+what the scanner found and why none of it blocks, and four green checks. The review is a
+five-minute job because the pipeline did the reading.
+
+**In this demo:** I am the only account on the repository, so I merge with an administrator
+override, and GitHub records that a rule was bypassed and by whom. In a real team that override is
+the thing an auditor asks about, and the answer is "here is every time it happened".
+
 ## 12. I merge
 
 Merging is what allows a deployment. Nothing deploys before this.
+
+**What is happening:** the branch is squashed into one commit and lands on `main`. `main` is now
+different from what is running in production, and the pipeline's job is to close that gap.
+
+**Why merging is the trigger and not something else:** because it is the one moment that has
+every safeguard behind it. Checks passed, a person approved, and the change is recorded with a ticket
+number and an author. Deploying from anywhere else - a laptop, a manual command - would skip all of
+that. Nobody on this pipeline can deploy without a merge, because nothing else holds the keys.
 
 ## 13. Development deploys by itself
 
 No approval needed. It goes.
 
+**What is happening:** the deploy job for development runs on the development runner the moment
+the checks on `main` pass. It decrypts the development credentials, plans, checks the plan, applies.
+
+**Why no approval:** the cost of being wrong in development is an afternoon. Putting a person in
+front of every development deploy teaches the team that the pipeline is slow, and a team that thinks
+the pipeline is slow finds a way around it. Development is where the pipeline should be invisible.
+
 ## 14. Staging waits
 
 GitHub says *Waiting for review*. Someone clicks approve.
 
+**What is happening:** the staging deploy job has been scheduled and has stopped before running a
+single step. A GitHub Environment named `stage` has a required reviewer, and the job cannot start
+until that person approves.
+
+**Why staging exists:** it has the same security settings as production and is smaller. A control
+that is missing in staging is a control nobody has tested. The approval is the moment a person says
+"this is ready to be tried against production's rules".
+
+**What to notice:** the deploy jobs run one at a time, in order. Production does not even ask for
+approval until staging has finished.
+
 ## 15. Production waits
 
 Same again. Someone clicks approve.
+
+**Why a second, separate approval:** staging passing is evidence. It is not permission. The person
+who approves production is answering a different question - not "does it work" but "do we want this
+in production now, during month-end close, with these people on call". That is a business decision,
+and the pipeline puts it in front of a human rather than making it a side effect of a merge.
+
+**Where the gate lives:** in the repository's Environment settings, not in the workflow file. So a
+pull request cannot remove it. Changing who can approve production is itself a settings change with
+an audit trail.
 
 ## 16. The plan is checked before anything is built
 
@@ -368,12 +473,25 @@ If it fails, nothing is built.
 
 ## 17. Terraform builds a new server
 
-The file said two production servers. It now says three. Terraform works out that one is missing and
-creates it.
+The file said two production servers. It now says three. Terraform compares the file with what it
+built last time and creates only the difference.
 
 ```
 proxmox_virtual_environment_container.app[2]: Creation complete
 ```
+
+**How it knows what exists:** it keeps a record - the state - in a PostgreSQL database on its own
+management network, one database per environment. Without that record it would build duplicates on
+every run. The database also locks the record while an apply is running, so two deploys cannot race
+each other and corrupt it.
+
+**What it builds:** an unprivileged Linux container, on production's own network, at the next
+address in the layout, with the admin SSH keys installed and DNS configured, set to restart after a
+reboot and protected against accidental deletion. All of that comes from the module; the production
+file only said "three".
+
+**In today's demo** every environment was torn down before we started, so this run builds all five
+servers rather than one. On an ordinary day it would build only the one that is missing.
 
 That machine is empty. Terraform talks to the Proxmox API to build machines. It never logs into
 them.
@@ -386,17 +504,27 @@ them.
 
 ```
 environment=prod  version=1.1.0  containers=3
-  app-prod-1 (321)  already serving 1.1.0  - skipped
-  app-prod-2 (322)  already serving 1.1.0  - skipped
+  app-prod-1 (321)  installing 1.1.0 ...
+    app-prod-1 serving {"version": "1.1.0"}
+  app-prod-2 (322)  installing 1.1.0 ...
+    app-prod-2 serving {"version": "1.1.0"}
   app-prod-3 (323)  installing 1.1.0 ...
     app-prod-3 serving {"version": "1.1.0"}
 done
 ```
 
-Two things worth noticing.
+**Why this is a separate step and not part of the pipeline:** Terraform builds machines through
+the Proxmox API and never logs into them. Installing software is a different job with a different
+blast radius. Keeping them apart means rebuilding a server does not mean redeploying the
+application, and redeploying the application does not mean touching infrastructure. This step runs
+on the host, where it can reach every container.
 
-**It skipped the servers that were already working.** It asks each one what it is serving before it
-touches anything, so running it twice changes nothing.
+Run it a second time and every line says `already serving 1.1.0 - skipped`. Two things worth
+noticing.
+
+**It skips the servers that are already working.** It asks each one what it is serving before it
+touches anything, so running it twice changes nothing. That is what makes it safe to run after any
+failure, without working out where it got to.
 
 **It waits for the health check.** The application answers 503 for the first two seconds on purpose.
 A check that fires immediately after a restart would race it and report a failure that isn't real.
@@ -423,6 +551,15 @@ curl http://10.30.10.22:8080/
 ```
 
 It knows it is production because it reads that from its own hostname. Nothing had to tell it.
+
+**What this proves:** not that a web page loads. That five separate machines exist, each reporting
+its own name and its own environment, three of them in production because a file says three. The
+greeting is the one from the start of the session, coming back out of a machine that did not exist
+when it was said.
+
+**What to ask, if you want to test it:** ask for a different one. `10.10.10.20` answers `dev`,
+`10.20.10.20` answers `stage`. Ask for a fourth production server and the answer is a one-line pull
+request, and this whole path again.
 
 ---
 
