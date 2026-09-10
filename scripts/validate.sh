@@ -71,8 +71,13 @@ pct exec 201 -- su - runner -c \
 
 hdr "8. Right password, wrong network, still refused"
 PW=$(pct exec 204 -- cat /root/creds/prod.pw 2>/dev/null)
+# Without a password this check would still PASS, because pg_hba refuses the
+# address before it ever looks at the password. So an empty PW is a FAIL: the
+# check would be reporting success while proving nothing.
+if [ -z "$PW" ]; then no "dev refused by prod database" "no password to test with (/root/creds/prod.pw on 204)"; else
 pct exec 201 -- bash -c "PGPASSWORD='$PW' psql -h 10.40.10.10 -U tf_prod -d tfstate_prod -c 'SELECT 1'" 2>&1 \
   | grep -q "no pg_hba.conf entry" && ok "dev refused by prod database" || no "database isolation" "it connected"
+fi
 
 hdr "9. The deploy step is staged and safe to repeat"
 [ -x /root/install-app.sh ] && ok "install-app.sh present" || no "install-app.sh" "missing"

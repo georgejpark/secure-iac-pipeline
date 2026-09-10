@@ -197,6 +197,12 @@ no pg_hba.conf entry for host "10.10.10.10"
 
 Right password. Wrong network. Still refused.
 
+**One trap in this check.** If `/root/creds/prod.pw` were missing, `PW` would be empty and the
+connection would *still* be refused, because Postgres checks the source address before it looks
+at the password. The check would pass while proving nothing. So `validate.sh` treats an empty
+password as a failure, and the file is confirmed present on 204 before the demo.
+
+
 ---
 
 # TEST 9  -  Does the deploy step leave working servers alone?

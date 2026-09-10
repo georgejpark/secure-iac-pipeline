@@ -393,6 +393,11 @@ Expected:
 FATAL:  no pg_hba.conf entry for host "10.10.10.10", user "tf_prod", database "tfstate_prod"
 ```
 
+**One trap in this check.** If `/root/creds/prod.pw` were missing, `PW` would be empty and the
+connection would *still* be refused, because Postgres checks the source address before it looks
+at the password. The check would pass while proving nothing. So `validate.sh` treats an empty
+password as a failure, and the file is confirmed present on 204 before the demo.
+
 **Proves:** production's Terraform state database refuses the development machine even when the
 correct password is supplied.
 

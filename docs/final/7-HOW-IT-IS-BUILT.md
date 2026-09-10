@@ -309,7 +309,7 @@ These live on the Proxmox host. They were built by hand and are documented in do
         +-----------------------+-----------------------+
                                 |  each runner: port 5432 only, own database only
                                 v
-                     10.40.10.0/24  MANAGEMENT
+                     vmbr4  10.40.10.0/24  MANAGEMENT
                        .10  tf-state (204)  PostgreSQL
                             tfstate_dev / tfstate_stage / tfstate_prod
 ```
