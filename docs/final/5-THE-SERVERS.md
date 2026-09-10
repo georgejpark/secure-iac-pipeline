@@ -11,7 +11,11 @@ George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
 
 # The servers
 
-Eight Linux containers on one Proxmox host.
+Eight Linux containers on one Proxmox host - nine once the demo's pull request has built the third
+production server, 323 app-prod-3 at 10.30.10.22.
+
+On the day of the demo the 30X group does not exist when the session starts. The pipeline builds all
+of them live. This document describes them as they are once built.
 
 They split into two groups. The 20X group runs the pipeline. The 30X group runs the web application.
 
@@ -186,9 +190,9 @@ is missing in staging is a setting nobody has tested.
 
 ---
 
-## 321 and 322  app-prod-1 and app-prod-2
+## 321, 322 and 323  app-prod-1, -2 and -3
 
-**What they are:** the production web servers. Two of them.
+**What they are:** the production web servers. Two before the demo's pull request, three after.
 
 **How they were made:** `terraform apply` in the production deploy job, after somebody approved it.
 
@@ -208,7 +212,7 @@ Change that number and the pipeline builds more. That is the demo.
 - **Delete protection.** Terraform cannot destroy them. I tried, and Proxmox refused. You have to
   turn the protection off deliberately first.
 
-**Addresses:** 10.30.10.20 and 10.30.10.21
+**Addresses:** 10.30.10.20, 10.30.10.21 and 10.30.10.22
 
 ---
 
@@ -295,5 +299,6 @@ Log in as `opsadmin`. The password is in `/root/creds/opsadmin-dev.pw` on the ho
 | 311 | app-stage-1 | staging web server |
 | 321 | app-prod-1 | production web server |
 | 322 | app-prod-2 | production web server |
+| 323 | app-prod-3 | production web server, built by the demo |
 
 **201 to 204 were built by hand. 301 to 322 were built by the pipeline.**

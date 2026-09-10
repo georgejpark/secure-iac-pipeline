@@ -11,7 +11,7 @@ George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
 
 # What the checks prove
 
-A walk through `validate.sh`. Thirty eight checks, nine groups.
+A walk through `validate.sh`. Thirty eight checks, nine groups. Written for the state after the demo has built the servers.
 
 ---
 
@@ -74,7 +74,7 @@ exist to prove.
 
 # GROUP 1  -  Infrastructure          (3 checks)
 
-## 1.1  Eight containers exist
+## 1.1  Nine containers exist
 
 ```bash
 pct list | tail -n +2 | wc -l
@@ -82,10 +82,10 @@ pct list | tail -n +2 | wc -l
 
 **Proves:** nothing has been deleted since the last run.
 
-**Why it matters:** the demo assumes four CI containers and four application containers. If one is
+**Why it matters:** after the demo there are four CI containers and five application containers. If one is
 gone, a later check fails in a confusing way. Better to find out here.
 
-## 1.2  All eight are running
+## 1.2  All nine are running
 
 ```bash
 pct list | tail -n +2 | grep -c running
@@ -96,20 +96,19 @@ pct list | tail -n +2 | grep -c running
 **Why it matters:** a stopped container still appears in `pct list`. Counting containers is not the
 same as counting working containers, so this is checked separately rather than assumed.
 
-## 1.3  VMID 323 is free
+## 1.3  VMID 323 exists
 
 ```bash
-pct list | grep -q " 323 " && echo TAKEN || echo free
+pct list | grep "^323 "
 ```
 
-**Proves:** nothing is occupying the container ID that Terraform is about to use.
+**Proves:** the container the demo's pull request added is really there.
 
-**Why it matters:** this is the one that would have stopped the demo. When the pull request merges,
-Terraform creates a third production container at VMID 323. If anything is already sitting on that
-ID, the apply fails in front of the audience.
-
-I know this because I created a test container at 323 while building the deploy step, and I had to
-remember to destroy it. This check is here so I do not have to remember.
+**Why it matters:** this is the one that would have stopped the demo the other way round. Before the
+demo the check was "323 is free", because if anything was sitting on that ID the apply would have
+failed in front of the audience - I had created a test container at 323 while building the deploy
+step and had to remember to destroy it. After the demo the check flips: 323 must exist, because that
+is what the pull request built.
 
 ---
 

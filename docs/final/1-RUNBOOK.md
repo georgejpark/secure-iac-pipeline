@@ -485,15 +485,20 @@ IaC (prod)     green
 ```
 Deploy (dev)     runs on its own
 Deploy (stage)   Waiting for review
-Deploy (prod)    Waiting for review
+Deploy (prod)    Queued
 ```
 
-> "Development went out by itself. Staging and production stopped."
+**Prod says *Queued*, not *Waiting*, until stage has finished.** The deploys run one at a time, in
+order. It flips to *Waiting for review* on its own once stage is green. Do not read "Queued" as a
+problem.
+
+> "Development went out by itself. Staging stopped and is asking for a person. Production is queued
+> behind it - it will not even ask until staging is done."
 
 **Approve staging.** A yellow bar appears: **Review pending deployments**. Click it, tick **stage**,
 click **Approve and deploy**. About 30 seconds, then green.
 
-**Then approve production the same way.**
+**Then, once stage is green, production flips to *Waiting for review*. Approve it the same way.**
 
 > "Development goes out on its own. Staging and production each need a person to say yes. That is the
 > whole promotion model."

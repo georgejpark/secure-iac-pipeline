@@ -11,11 +11,12 @@ APPS="301:app-dev-1:10.10.10.20:dev 311:app-stage-1:10.20.10.20:stage 321:app-pr
 GREET="Hello World, Hello Guys This is George and nice to meet you"
 
 hdr "1. Infrastructure"
+# After the demo: four platform containers plus the five the pipeline built.
 n=$(pct list | tail -n +2 | wc -l)
-[ "$n" -eq 8 ] && ok "8 containers exist" || no "container count" "found $n"
+[ "$n" -eq 9 ] && ok "9 containers exist" || no "container count" "found $n, expected 9"
 r=$(pct list | tail -n +2 | grep -c running)
-[ "$r" -eq 8 ] && ok "all 8 running" || no "all running" "only $r"
-pct list | grep -q " 323 \|^323" && no "VMID 323 free" "something is using it" || ok "VMID 323 free for the demo"
+[ "$r" -eq "$n" ] && ok "all $n running" || no "all running" "only $r of $n"
+pct list | grep -q "^323 " && ok "VMID 323 exists, built by the demo" || no "VMID 323" "not built"
 
 hdr "2. Each application answers"
 for a in $APPS; do
