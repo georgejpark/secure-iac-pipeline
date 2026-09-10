@@ -147,7 +147,7 @@ GET /health    is it alive
 GET /version   which version is running
 ```
 
-**Its size:** 1 CPU, 512 MB. The smallest of the three environments.
+**Its size:** 2 CPU, 2 GB. The same as every other environment. Dev is cheaper in what it lacks, not in what it is given.
 
 **What it does not have:** restart on reboot, delete protection. Development is allowed to be cheap.
 Losing it costs an afternoon.
@@ -164,7 +164,7 @@ Losing it costs an afternoon.
 
 **What runs on it:** the same application as development.
 
-**Its size:** 2 CPU, 1 GB. Bigger than development.
+**Its size:** 2 CPU, 2 GB. The same as development and production.
 
 **What it has that development does not:** it restarts automatically after a reboot.
 
