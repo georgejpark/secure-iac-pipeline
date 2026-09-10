@@ -43,6 +43,29 @@ The password is in `/root/creds/opsadmin-dev.pw` on the host.
 
 ---
 
+# Run everything at once
+
+Before doing anything by hand, run this on the host. It is every check in this document, and it takes
+about a minute.
+
+```bash
+ssh root@192.168.1.132
+/root/validate.sh
+```
+
+Expect the last line to read:
+
+```
+38 passed, 0 failed
+```
+
+If anything says FAIL it prints what it expected next to it. Work that one out before carrying on.
+
+The individual tests below are the same checks written out one at a time, so I can run any single one
+in front of the panel and explain what it proves.
+
+---
+
 # TEST 1  -  Is every application answering?
 
 ```bash
