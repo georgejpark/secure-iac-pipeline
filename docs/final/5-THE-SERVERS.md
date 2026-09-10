@@ -1,3 +1,14 @@
+<!-- title -->
+# The Password You Already Deleted
+
+### Secrets in git, and a pipeline that stops them reaching production
+
+George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
+
+*Document 5 of 7 — Every machine, what it holds, and what it does.*
+
+---
+
 # The servers
 
 Eight Linux containers on one Proxmox host.

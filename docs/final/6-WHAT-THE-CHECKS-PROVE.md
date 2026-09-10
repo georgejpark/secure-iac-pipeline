@@ -1,3 +1,14 @@
+<!-- title -->
+# The Password You Already Deleted
+
+### Secrets in git, and a pipeline that stops them reaching production
+
+George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
+
+*Document 6 of 7 — What each check proves, and what it does not.*
+
+---
+
 # What the checks prove
 
 A walk through `validate.sh`. Thirty eight checks, nine groups.

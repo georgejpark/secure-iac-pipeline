@@ -1,3 +1,14 @@
+<!-- title -->
+# The Password You Already Deleted
+
+### Secrets in git, and a pipeline that stops them reaching production
+
+George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
+
+*Document 7 of 7 — The technical design, in three parts.*
+
+---
+
 # How it is built
 
 The technical design, in three parts:

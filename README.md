@@ -1,4 +1,16 @@
-# secure-iac-pipeline
+# The Password You Already Deleted
+
+### Secrets in git, and a pipeline that stops them reaching production
+
+George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
+
+Demo repository: **secure-iac-pipeline**
+
+Documents are in [`docs/final/`](docs/final/), diagrams in [`docs/diagrams/`](docs/diagrams/).
+
+---
+
+## secure-iac-pipeline
 
 A working GitHub Actions pipeline that blocks two classes of change from
 reaching a cloud environment: **leaked credentials** and **insecure

@@ -7,7 +7,7 @@
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
 
-        <mxCell id="t" value="GitOps flow &#8212; security-pipeline.yml &#8212; where every tool is called&#10;One workflow file. Three jobs. Three self-hosted runners."
+        <mxCell id="t" value="The Password You Already Deleted &#8212; GitOps flow, and where every tool is called&#10;One workflow file. Three jobs. Three self-hosted runners."
           style="text;html=1;align=left;fontSize=19;fontStyle=1;fontColor=#1F2933;"
           vertex="1" parent="1"><mxGeometry x="40" y="15" width="1200" height="50" as="geometry"/></mxCell>
 

@@ -1,3 +1,14 @@
+<!-- title -->
+# The Password You Already Deleted
+
+### Secrets in git, and a pipeline that stops them reaching production
+
+George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
+
+*Document 3 of 7 — What is tested, and how to run it yourself.*
+
+---
+
 # Testing and checking
 
 How to prove the thing works, and what all the servers are.

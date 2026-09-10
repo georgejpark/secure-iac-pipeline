@@ -7,7 +7,7 @@
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
 
-        <mxCell id="t" value="Teardown &#8212; destroying every environment with Terraform&#10;Run on the matching runner. Terraform owns the state; nothing is deleted behind its back."
+        <mxCell id="t" value="The Password You Already Deleted &#8212; teardown, destroying every environment with Terraform&#10;Run on the matching runner. Terraform owns the state; nothing is deleted behind its back."
           style="text;html=1;align=left;fontSize=19;fontStyle=1;fontColor=#1F2933;"
           vertex="1" parent="1"><mxGeometry x="40" y="20" width="1300" height="50" as="geometry"/></mxCell>
 
