@@ -1,0 +1,106 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="Teardown flow" id="destroy-flow">
+    <mxGraphModel dx="1400" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1"
+                  connect="1" arrows="1" fold="1" page="1" pageScale="1"
+                  pageWidth="1500" pageHeight="1320" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="t" value="Teardown &#8212; destroying every environment with Terraform&#10;Run on the matching runner. Terraform owns the state; nothing is deleted behind its back."
+          style="text;html=1;align=left;fontSize=19;fontStyle=1;fontColor=#1F2933;"
+          vertex="1" parent="1"><mxGeometry x="40" y="20" width="1300" height="50" as="geometry"/></mxCell>
+
+        <mxCell id="warn" value="THERE IS NO DESTROY BUTTON IN THE PIPELINE &#8212; AND THAT IS DELIBERATE&#10;security-pipeline.yml only ever runs terraform apply. Destruction is not a thing CI should be able to do on a merge.&#10;Teardown is a deliberate, manual act performed on the runner that owns that environment's key, state and API token."
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDECEC;strokeColor=#B3261E;fontSize=13;fontStyle=1;align=left;spacingLeft=14;verticalAlign=middle;"
+          vertex="1" parent="1"><mxGeometry x="40" y="85" width="1420" height="80" as="geometry"/></mxCell>
+
+        <mxCell id="s0" value="START&#10;Decide which environments go"
+          style="ellipse;whiteSpace=wrap;html=1;fillColor=#E8EEF7;strokeColor=#4A6FA5;fontSize=12;fontStyle=1;"
+          vertex="1" parent="1"><mxGeometry x="80" y="210" width="220" height="80" as="geometry"/></mxCell>
+
+        <mxCell id="pre" value="PRE-CHECK &#8212; the state backend must be reachable&#10;&#10;pct exec 204 -- ss -tlnp | grep 5432&#10;&#10;MUST show 10.40.10.10:5432, not only 127.0.0.1.&#10;If it shows loopback only:&#10;pct exec 204 -- systemctl restart postgresql@17-main"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#C77700;fontSize=11;align=left;spacingLeft=12;verticalAlign=top;spacingTop=10;"
+          vertex="1" parent="1"><mxGeometry x="360" y="195" width="430" height="140" as="geometry"/></mxCell>
+
+        <mxCell id="prew" value="Postgres binds 10.40.10.10 only if that interface is already up when it starts.&#10;After a tf-state reboot it can come back on loopback alone and every&#10;terraform init then fails with 'connection refused'. Check it first, every time."
+          style="text;html=1;align=left;fontSize=11;fontStyle=2;fontColor=#7A4E00;"
+          vertex="1" parent="1"><mxGeometry x="830" y="215" width="620" height="60" as="geometry"/></mxCell>
+
+        <mxCell id="lane" value="FOR EACH ENVIRONMENT &#8212; dev on ci-dev (201), stage on ci-stage (202), prod on ci-prod (203)"
+          style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F7FA;strokeColor=#6B4E9E;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;fontSize=14;fontStyle=1;"
+          vertex="1" parent="1"><mxGeometry x="40" y="370" width="1420" height="470" as="geometry"/></mxCell>
+
+        <mxCell id="d1" value="1.  cd terraform/deploy/&lt;env&gt;&#10;     inside the runner's checkout"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B4E9E;fontSize=11;align=left;spacingLeft=10;fontFamily=Courier New;"
+          vertex="1" parent="1"><mxGeometry x="70" y="415" width="300" height="60" as="geometry"/></mxCell>
+
+        <mxCell id="d2" value="2.  SOPS decrypt&#10;     ../../envs/&lt;env&gt;/secrets.enc.yaml&#10;     with THIS runner's age key only"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B4E9E;fontSize=11;align=left;spacingLeft=10;fontFamily=Courier New;"
+          vertex="1" parent="1"><mxGeometry x="400" y="415" width="300" height="60" as="geometry"/></mxCell>
+
+        <mxCell id="d3" value="3.  terraform init -reconfigure&#10;     -backend-config=conn_str=...&#10;     &#8594; schema deploy_&lt;env&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B4E9E;fontSize=11;align=left;spacingLeft=10;fontFamily=Courier New;"
+          vertex="1" parent="1"><mxGeometry x="730" y="415" width="300" height="60" as="geometry"/></mxCell>
+
+        <mxCell id="d4" value="4.  terraform plan -destroy&#10;     READ IT. Confirm the count.&#10;     dev 1, stage 1, prod 2"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#C77700;fontSize=11;align=left;spacingLeft=10;fontFamily=Courier New;fontStyle=1;"
+          vertex="1" parent="1"><mxGeometry x="1060" y="415" width="330" height="60" as="geometry"/></mxCell>
+
+        <mxCell id="dec" value="Is this&#10;prod?"
+          style="rhombus;whiteSpace=wrap;html=1;fillColor=#FDECEC;strokeColor=#B3261E;fontSize=12;fontStyle=1;"
+          vertex="1" parent="1"><mxGeometry x="180" y="520" width="160" height="100" as="geometry"/></mxCell>
+
+        <mxCell id="prot" value="PROD ONLY &#8212; clear delete protection first&#10;&#10;pct set 321 --protection 0&#10;pct set 322 --protection 0&#10;&#10;Without this terraform stops the containers and then&#10;fails with 'Error: Container delete'. protect = true is&#10;a Terraform-managed attribute the provider does not&#10;clear for itself on destroy."
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDECEC;strokeColor=#B3261E;fontSize=11;align=left;spacingLeft=12;verticalAlign=top;spacingTop=10;"
+          vertex="1" parent="1"><mxGeometry x="400" y="510" width="450" height="150" as="geometry"/></mxCell>
+
+        <mxCell id="protg" value="This is the PVE-4 guardrail doing exactly its job.&#10;Say so out loud if it fires in front of anyone:&#10;production refused to be deleted by automation.&#10;A human had to disarm it on purpose."
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#C77700;fontSize=11;align=left;spacingLeft=12;fontStyle=2;"
+          vertex="1" parent="1"><mxGeometry x="880" y="510" width="510" height="80" as="geometry"/></mxCell>
+
+        <mxCell id="d5" value="5.  terraform destroy -auto-approve"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#B3261E;strokeColor=#7A1810;fontColor=#FFFFFF;fontSize=13;fontStyle=1;fontFamily=Courier New;"
+          vertex="1" parent="1"><mxGeometry x="180" y="680" width="440" height="60" as="geometry"/></mxCell>
+
+        <mxCell id="d6" value="6.  Verify: terraform state list &#8594; 0&#10;     and pct list shows the VMID gone"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E9F5EC;strokeColor=#2E7D32;fontSize=11;align=left;spacingLeft=10;fontFamily=Courier New;"
+          vertex="1" parent="1"><mxGeometry x="680" y="680" width="440" height="60" as="geometry"/></mxCell>
+
+        <mxCell id="ord" value="ORDER: dev &#8594; stage &#8594; prod. No technical dependency between them, but tearing down in the same order you build keeps the habit consistent."
+          style="text;html=1;align=left;fontSize=11;fontStyle=2;"
+          vertex="1" parent="1"><mxGeometry x="70" y="770" width="1370" height="30" as="geometry"/></mxCell>
+
+        <mxCell id="end" value="END STATE &#8212; a clean slate for the demo"
+          style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E9F5EC;strokeColor=#2E7D32;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;fontSize=14;fontStyle=1;"
+          vertex="1" parent="1"><mxGeometry x="40" y="870" width="1420" height="200" as="geometry"/></mxCell>
+
+        <mxCell id="end1" value="STILL RUNNING &#8212; the platform, built by hand&#10;&#10;201  ci-dev&#10;202  ci-stage&#10;203  ci-prod&#10;204  tf-state"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D32;fontSize=12;align=left;spacingLeft=12;verticalAlign=top;spacingTop=10;"
+          vertex="1" parent="1"><mxGeometry x="70" y="910" width="420" height="140" as="geometry"/></mxCell>
+
+        <mxCell id="end2" value="GONE &#8212; everything the pipeline builds&#10;&#10;301  app-dev-1&#10;311  app-stage-1&#10;321  app-prod-1&#10;322  app-prod-2&#10;&#10;terraform state list = 0 in all three schemas"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B3261E;fontSize=12;align=left;spacingLeft=12;verticalAlign=top;spacingTop=10;"
+          vertex="1" parent="1"><mxGeometry x="520" y="910" width="420" height="140" as="geometry"/></mxCell>
+
+        <mxCell id="end3" value="FREE VMIDs for the demo&#10;&#10;301  311  321  322  323&#10;&#10;The demo now builds ALL FIVE from nothing,&#10;live, through the pipeline."
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A6FA5;fontSize=12;align=left;spacingLeft=12;verticalAlign=top;spacingTop=10;"
+          vertex="1" parent="1"><mxGeometry x="970" y="910" width="420" height="140" as="geometry"/></mxCell>
+
+        <mxCell id="left" value="WHAT TEARDOWN DOES NOT TOUCH&#10;the four bridges and the forward policy  &#183;  the three runners, their tools and their age keys  &#183;  the state database, its roles and pg_hba.conf&#10;the Proxmox API tokens  &#183;  the GitHub Environments and branch protection  &#183;  /opt/app-source and /root/install-app.sh on the host&#10;&#10;That is the line between the platform and what the platform exists to build. Teardown only ever removes the right-hand column."
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F7FA;strokeColor=#4A6FA5;fontSize=11;align=left;spacingLeft=12;verticalAlign=top;spacingTop=10;"
+          vertex="1" parent="1"><mxGeometry x="40" y="1100" width="1420" height="120" as="geometry"/></mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#4A6FA5;strokeWidth=2;endArrow=block;" edge="1" parent="1" source="s0" target="pre"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6B4E9E;strokeWidth=2;endArrow=block;" edge="1" parent="1" source="d1" target="d2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6B4E9E;strokeWidth=2;endArrow=block;" edge="1" parent="1" source="d2" target="d3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6B4E9E;strokeWidth=2;endArrow=block;" edge="1" parent="1" source="d3" target="d4"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6B4E9E;strokeWidth=2;endArrow=block;" edge="1" parent="1" source="d4" target="dec"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e6" value="yes" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#B3261E;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="dec" target="prot"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e7" value="no" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2E7D32;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="dec" target="d5"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#B3261E;strokeWidth=2;endArrow=block;" edge="1" parent="1" source="prot" target="d5"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2E7D32;strokeWidth=2;endArrow=block;" edge="1" parent="1" source="d5" target="d6"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
