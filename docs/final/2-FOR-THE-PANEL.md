@@ -28,53 +28,53 @@ That's it. One number in one file goes from `2` to `3`.
 # The path it takes
 
 ```
-        I clone the repository
+        1.  clone the repository
                  |
-        I make a branch
+        2.  make a branch
                  |
-        I change one number
+        3.  change one number
                  |
-        I commit  ------------> a hook checks for passwords first
+        4.  commit  ------------> a hook checks for passwords first
                  |
-        I push
+        5.  push
                  |
-        I open a pull request
+        6.  open a pull request
                  |
    +-------------+-------------+
    |             |             |
- gitleaks     Checkov      ai_triage.py
+ 7. gitleaks  8. Checkov   9. ai_triage.py
  secrets,     terraform,   sorts, decides,
  whole        once per     writes the
  history      environment  comment
    |             |             |
    +-------------+-------------+
                  |
-        anything blocking?  ---- yes ----> STOPPED. fix it.
+        10. anything blocking?  ---- yes ----> STOPPED. fix it.
                  |
                  no
                  |
-        somebody approves it
+        11. somebody approves it
                  |
-        I merge to main
+        12. merge to main
                  |
    +-------------+-------------+
    |             |             |
-  DEV          STAGE         PROD
+ 13. DEV      14. STAGE     15. PROD
  goes out     waits for     waits for
   on its       someone       someone
    own        to approve    to approve
    |             |             |
    +-------------+-------------+
                  |
-        policy_check.py checks the plan
-        (unprivileged, boot, delete protection)
+        16. policy_check.py checks the plan
+            (unprivileged, boot, delete protection)
                  |
-        terraform builds the server
+        17. terraform builds the server
                  |
-        the deploy step installs
-        the application on it
+        18. the deploy step installs
+            the application on it
                  |
-        the new server answers
+        19. the new server answers
 ```
 
 ---
@@ -115,16 +115,23 @@ Before this saves, a hook runs. It looks for passwords and API keys.
 
 If it finds one, the commit doesn't happen. Nothing has left my laptop.
 
-## 5. Push and open a pull request
+## 5. Push
 
 ```bash
 git push -u origin demo/TM-118-third-production-server
+```
+
+The branch now exists on GitHub. Nothing has run yet.
+
+## 6. Open a pull request
+
+```bash
 gh pr create --base main
 ```
 
 This is what starts the pipeline.
 
-## 6. The pipeline looks for passwords
+## 7. The pipeline looks for passwords
 
 **The tool:** gitleaks 8.30.1. Open source. Pinned to that version on the runner.
 
@@ -182,7 +189,7 @@ In the browser: on the pull request, click **Secrets**, then expand **Scan the e
 history**. The log names the runner it landed on and ends with `no leaks found`. Or **Security →
 Code scanning**, filter by tool `gitleaks`.
 
-## 7. The pipeline checks the infrastructure code
+## 8. The pipeline checks the infrastructure code
 
 **The tool:** Checkov. Open source. It reads Terraform and looks for unsafe settings.
 
@@ -264,7 +271,7 @@ In the browser: on the pull request, click **IaC (prod)**, expand **Checkov** an
 Then open **IaC (dev)** and compare the runner name in the log header. Different machine. Or
 **Security → Code scanning**, filter by tool `Checkov`, and note the three categories.
 
-## 8. The pipeline writes a comment
+## 9. The pipeline writes a comment
 
 **The tool:** `scripts/ai_triage.py`. Ours. About 300 lines of Python.
 
@@ -315,7 +322,7 @@ gh pr view 4 --comments
 On the pull request page, scroll to the comments. Three, one per environment, each starting with
 the environment name and the counts.
 
-## 9. The pull request is blocked
+## 10. The pull request is blocked
 
 It says:
 
@@ -323,7 +330,7 @@ It says:
 BLOCKED - Review required
 ```
 
-## 10. Somebody approves it
+## 11. Somebody approves it
 
 I cannot approve my own pull request. GitHub refuses:
 
@@ -333,23 +340,33 @@ Can not approve your own pull request
 
 Someone else has to look at it.
 
-## 11. I merge
+## 12. I merge
 
 Merging is what allows a deployment. Nothing deploys before this.
 
-## 12. Development deploys by itself
+## 13. Development deploys by itself
 
 No approval needed. It goes.
 
-## 13. Staging waits
+## 14. Staging waits
 
 GitHub says *Waiting for review*. Someone clicks approve.
 
-## 14. Production waits
+## 15. Production waits
 
 Same again. Someone clicks approve.
 
-## 15. Terraform builds a new server
+## 16. The plan is checked before anything is built
+
+Checkov has no rules for Proxmox, so the deploy job runs its own check, `scripts/policy_check.py`,
+against the Terraform **plan** - what will actually be created, with every variable resolved.
+
+Three rules. Unprivileged. Restarts after a reboot. Cannot be deleted by accident. Production must
+pass all three; development is allowed to skip the last two.
+
+If it fails, nothing is built.
+
+## 17. Terraform builds a new server
 
 The file said two production servers. It now says three. Terraform works out that one is missing and
 creates it.
@@ -361,7 +378,7 @@ proxmox_virtual_environment_container.app[2]: Creation complete
 That machine is empty. Terraform talks to the Proxmox API to build machines. It never logs into
 them.
 
-## 16. The deploy step installs the application
+## 18. The deploy step installs the application
 
 ```bash
 /root/install-app.sh prod
@@ -390,7 +407,7 @@ moves the `current` symlink, installs a systemd unit that points at `current` ra
 number, and waits for health to pass. Moving that symlink *is* the release, which is why a rollback
 is a symlink move and not a redeploy.
 
-## 17. The new server answers
+## 19. The new server answers
 
 ```bash
 curl http://10.30.10.22:8080/
