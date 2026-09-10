@@ -130,7 +130,17 @@ for them to ask something. Do not read it word for word, but do not improvise it
 
 ## What I say
 
-Hi, I'm George Park.
+**Open with this. Slow down. Look at them, not at the screen. Nothing is shared yet.**
+
+> **"Hello everyone, nice to meet you all. I'm George Park.**
+>
+> **Today I am going to show you a problem I found by accident, and the pipeline I built to stop it.**
+>
+> **Before I get into it, a short word about who I am."**
+
+Then straight into the ninety seconds.
+
+---
 
 I work in operations and platform engineering. Day to day that means Kubernetes, Terraform, CI/CD
 pipelines, and monitoring, across AWS and GCP.
@@ -162,6 +172,11 @@ routine housekeeping.
 
 I have built a working pipeline to demonstrate it. It runs on hardware in my house, it is running
 right now, and I will build production in front of you from nothing.
+
+> **Note to me — the callback.** The application on every container answers
+> *"Hello World, Hello Guys This is George and nice to meet you."* That is the same greeting I open
+> with. At STEP 8 the machine says it back to the room. Do not point at it or explain the joke. If
+> somebody notices, that is the moment. If nobody does, nothing is lost.
 
 ## If they ask "why Texas Mutual" or "why this role"
 
@@ -652,6 +667,10 @@ done
 
 > "Five machines. Each one knows which environment it is, because it reads it from its own hostname.
 > Three in production, because the file now says three."
+
+**The callback.** Every one of those five just said *"Hello World, Hello Guys This is George and nice
+to meet you"* — the greeting I opened with, ninety minutes of build later, coming back out of a
+machine that did not exist when I said it. **Do not explain it. Just let it sit for a beat.**
 
 ## STEP 9  -  Close                    (2 min)
 
