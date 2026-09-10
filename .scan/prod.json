@@ -373,8 +373,8 @@
                         }
                     },
                     "evaluated_keys": [
-                        "resource_type",
-                        "networking"
+                        "networking",
+                        "resource_type"
                     ]
                 },
                 "code_block": [
@@ -494,34 +494,6 @@
                 "check_len": null,
                 "definition_context_file_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
                 "breadcrumbs": {
-                    "ingress.cidr_blocks.0": [
-                        {
-                            "type": "module",
-                            "name": "claims_platform",
-                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
-                            "module_connection": false
-                        },
-                        {
-                            "type": "variable",
-                            "name": "trusted_cidr",
-                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
-                            "module_connection": false
-                        }
-                    ],
-                    "ingress.cidr_blocks": [
-                        {
-                            "type": "module",
-                            "name": "claims_platform",
-                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
-                            "module_connection": false
-                        },
-                        {
-                            "type": "variable",
-                            "name": "trusted_cidr",
-                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
-                            "module_connection": false
-                        }
-                    ],
                     "name": [
                         {
                             "type": "module",
@@ -551,6 +523,34 @@
                         }
                     ],
                     "egress.cidr_blocks": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "trusted_cidr",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "ingress.cidr_blocks.0": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "trusted_cidr",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "ingress.cidr_blocks": [
                         {
                             "type": "module",
                             "name": "claims_platform",
@@ -757,7 +757,7 @@
                 "check_len": null,
                 "definition_context_file_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
                 "breadcrumbs": {
-                    "tags.Environment": [
+                    "bucket": [
                         {
                             "type": "module",
                             "name": "claims_platform",
@@ -771,7 +771,7 @@
                             "module_connection": false
                         }
                     ],
-                    "bucket": [
+                    "tags.Environment": [
                         {
                             "type": "module",
                             "name": "claims_platform",
@@ -891,9 +891,9 @@
                         }
                     },
                     "evaluated_keys": [
-                        "resource_type",
                         "parameter/*/name",
-                        "engine"
+                        "engine",
+                        "resource_type"
                     ]
                 },
                 "code_block": [
@@ -1121,6 +1121,48 @@
                 "check_len": null,
                 "definition_context_file_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
                 "breadcrumbs": {
+                    "identifier": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "environment",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "final_snapshot_identifier": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "environment",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
+                    "instance_class": [
+                        {
+                            "type": "module",
+                            "name": "claims_platform",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
+                            "module_connection": false
+                        },
+                        {
+                            "type": "variable",
+                            "name": "instance_class",
+                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
+                            "module_connection": false
+                        }
+                    ],
                     "multi_az": [
                         {
                             "type": "module",
@@ -1145,48 +1187,6 @@
                         {
                             "type": "variable",
                             "name": "deletion_protection",
-                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
-                            "module_connection": false
-                        }
-                    ],
-                    "final_snapshot_identifier": [
-                        {
-                            "type": "module",
-                            "name": "claims_platform",
-                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
-                            "module_connection": false
-                        },
-                        {
-                            "type": "variable",
-                            "name": "environment",
-                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
-                            "module_connection": false
-                        }
-                    ],
-                    "identifier": [
-                        {
-                            "type": "module",
-                            "name": "claims_platform",
-                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
-                            "module_connection": false
-                        },
-                        {
-                            "type": "variable",
-                            "name": "environment",
-                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
-                            "module_connection": false
-                        }
-                    ],
-                    "instance_class": [
-                        {
-                            "type": "module",
-                            "name": "claims_platform",
-                            "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/envs/prod/main.tf",
-                            "module_connection": false
-                        },
-                        {
-                            "type": "variable",
-                            "name": "instance_class",
                             "path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
                             "module_connection": false
                         }
@@ -1222,8 +1222,8 @@
                         }
                     },
                     "evaluated_keys": [
-                        "resource_type",
                         "rule/*/status",
+                        "resource_type",
                         "replication_configuration/rules/*/status"
                     ]
                 },
@@ -1319,8 +1319,8 @@
                         }
                     },
                     "evaluated_keys": [
-                        "resource_type",
                         "rule/*/status",
+                        "resource_type",
                         "replication_configuration/rules/*/status"
                     ]
                 },
@@ -1388,7 +1388,7 @@
                 "check_len": null,
                 "definition_context_file_path": "/Users/georgepark/Desktop/interview-texas-mutual/secure-iac-pipeline/terraform/modules/claims-platform/main.tf",
                 "breadcrumbs": {
-                    "tags.Environment": [
+                    "bucket": [
                         {
                             "type": "module",
                             "name": "claims_platform",
@@ -1402,7 +1402,7 @@
                             "module_connection": false
                         }
                     ],
-                    "bucket": [
+                    "tags.Environment": [
                         {
                             "type": "module",
                             "name": "claims_platform",
