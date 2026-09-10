@@ -42,8 +42,10 @@ That's it. One number in one file goes from `2` to `3`.
                  |
    +-------------+-------------+
    |             |             |
- secrets      terraform     write a
-  check        checks       comment
+ gitleaks     Checkov      ai_triage.py
+ secrets,     terraform,   sorts, decides,
+ whole        once per     writes the
+ history      environment  comment
    |             |             |
    +-------------+-------------+
                  |
@@ -63,6 +65,9 @@ That's it. One number in one file goes from `2` to `3`.
    own        to approve    to approve
    |             |             |
    +-------------+-------------+
+                 |
+        policy_check.py checks the plan
+        (unprivileged, boot, delete protection)
                  |
         terraform builds the server
                  |
@@ -121,44 +126,194 @@ This is what starts the pipeline.
 
 ## 6. The pipeline looks for passwords
 
-It reads **every commit ever made**, not just mine.
+**The tool:** gitleaks 8.30.1. Open source. Pinned to that version on the runner.
+
+**Where it runs:** the development runner, container 201. It only reads source code, so it gets no
+keys and no access to anything.
+
+**What it reads:** **every commit ever made**, not just mine. The checkout line says
+`fetch-depth: 0`. Without that line it would see one commit.
 
 That matters. A password committed last year and deleted since would be invisible if it only looked
 at today's files.
 
-If it finds one, the pull request stops here.
+**What it does:**
+
+```
+gitleaks detect --source . --config .gitleaks.toml --redact --exit-code 1
+```
+
+- `--config .gitleaks.toml` - the patterns that count as a secret, and one allow-listed fake key
+  the demo uses on purpose
+- `--redact` - a found secret is never printed in full in the log
+- `--exit-code 1` - a finding fails the job. That is what makes this a gate and not a report
+
+**What happens on a finding:** the job goes red, and nothing else in the pipeline starts. The
+result is also uploaded to the repository's **Security** tab as a code-scanning alert.
+
+**Check it yourself:**
+
+```bash
+# on a laptop with the repository: the same scan, the same config, the whole history
+make secrets
+
+# on GitHub: the most recent pipeline run on this pull request, and its jobs
+RUN=$(gh run list --workflow "Security Pipeline" --event pull_request --limit 1 \
+      --json databaseId --jq '.[0].databaseId')
+gh run view $RUN
+
+# the gitleaks result, straight from that run's log
+JOB=$(gh run view $RUN --json jobs --jq '.jobs[] | select(.name=="Secrets") | .databaseId')
+gh run view --job $JOB --log | grep -E "Runner name|commits scanned|leaks found"
+#   Runner name: 'ci-dev'
+#   54 commits scanned.
+#   no leaks found
+
+# the Security tab, by API: every scan gitleaks uploaded, and how many findings each had
+gh api "repos/georgejpark/secure-iac-pipeline/code-scanning/analyses?tool_name=gitleaks" \
+  --jq '.[] | "\(.created_at)  \(.ref)  findings=\(.results_count)  rules=\(.rules_count)"'
+#   ...  refs/pull/4/merge  findings=0  rules=225
+
+# on the runner: the pinned version
+pct exec 201 -- gitleaks version
+```
+
+In the browser: on the pull request, click **Secrets**, then expand **Scan the entire repository
+history**. The log names the runner it landed on and ends with `no leaks found`. Or **Security →
+Code scanning**, filter by tool `gitleaks`.
 
 ## 7. The pipeline checks the infrastructure code
 
-This is **Checkov**. It reads Terraform and looks for unsafe settings.
+**The tool:** Checkov. Open source. It reads Terraform and looks for unsafe settings.
 
-Examples of what it stops:
+**Where it runs:** three times, on three different machines. Development on 201, staging on 202,
+production on 203. A job for one environment cannot land on another environment's runner; that is
+decided by one line, `runs-on: [self-hosted, <environment>]`.
+
+**What it reads:** `terraform/envs/<environment>/`. Same code, three copies, and only the settings
+that are allowed to differ between environments differ.
+
+**What it does, in order, on each runner:**
+
+```
+terraform fmt -check          formatting is a gate, not a suggestion
+sops --decrypt                the state database password, with a key only this runner has
+terraform init                connects to this environment's own state database
+terraform validate            the code is well formed
+checkov -d terraform/envs/<environment> --soft-fail
+```
+
+`--soft-fail` means **Checkov itself never fails the job.** It reports. The decision is made in
+step 8. That is deliberate: a scanner that fails the build on every finding gets switched off.
+
+**Examples of what Checkov finds:**
 
 - A storage bucket anyone on the internet can read
 - SSH open to the whole world
 - A database with no encryption
+- A database anyone on the internet can connect to
 
-It runs three times. Once per environment.
+**What the numbers mean.** Against the deliberately broken copy of the code in
+`terraform/insecure/`, the pipeline blocks:
 
-- Development blocks **10** things
-- Staging blocks **14**
-- Production blocks **14**
+- Development: **10** things
+- Staging: **14**
+- Production: **14**
 
-The extra four are things development is allowed to skip.
+The extra four are things development is allowed to skip: deletion protection, multi-AZ, log
+export, enhanced monitoring. Losing a development box costs an afternoon.
+
+Against the real code in this pull request, Checkov still reports findings - 9 in production, 11 in
+development - but **none is on the blocking list**. That is why the checks are green, and why step 8
+exists.
+
+**Check it yourself:**
+
+```bash
+# on a laptop: the broken code, all three environments. Non-zero exit is the correct result
+make scan-insecure
+#   dev    exit=1  blocking=10
+#   stage  exit=1  blocking=14
+#   prod   exit=1  blocking=14
+
+# on a laptop: the real code. Expect "No blocking findings" three times
+make scan
+
+# on GitHub: the Checkov result and the triage verdict, from the production job's log
+RUN=$(gh run list --workflow "Security Pipeline" --event pull_request --limit 1 \
+      --json databaseId --jq '.[0].databaseId')
+JOB=$(gh run view $RUN --json jobs --jq '.jobs[] | select(.name=="IaC (prod)") | .databaseId')
+gh run view --job $JOB --log | grep -E "Runner name|Passed checks|blocking="
+#   Runner name: 'ci-prod'
+#   Passed checks: 63, Failed checks: 9, Skipped checks: 0
+#   blocking=0 advisory=8 other=1
+
+# the Security tab, by API: one Checkov upload per environment
+gh api "repos/georgejpark/secure-iac-pipeline/code-scanning/analyses?tool_name=Checkov&per_page=3" \
+  --jq '.[] | "\(.created_at)  \(.category)  findings=\(.results_count)"'
+#   checkov-prod   findings=9
+#   checkov-stage  findings=9
+#   checkov-dev    findings=11
+
+# open alerts, by tool
+gh api "repos/georgejpark/secure-iac-pipeline/code-scanning/alerts?state=open&per_page=100" \
+  --jq 'group_by(.tool.name)[] | "\(.[0].tool.name): \(length) open"'
+```
+
+In the browser: on the pull request, click **IaC (prod)**, expand **Checkov** and read the counts.
+Then open **IaC (dev)** and compare the runner name in the log header. Different machine. Or
+**Security → Code scanning**, filter by tool `Checkov`, and note the three categories.
 
 ## 8. The pipeline writes a comment
 
-It finds 24 problems in 110 lines of code.
+**The tool:** `scripts/ai_triage.py`. Ours. About 300 lines of Python.
 
-Nobody reads 24 findings. They turn the tool off instead.
+**Why it exists:** Checkov finds 24 problems in 110 lines of code. Nobody reads 24 findings. They
+turn the tool off instead.
 
-So a script sorts them:
+**What it reads:** Checkov's JSON output from step 7.
 
-- **10** stop the merge
-- **5** are advice
-- **9** are noted
+**What it does:**
 
-Then it writes a comment in plain English.
+1. Compares every finding against three lists that live in the script and are version controlled:
+   - **blocking** - 10 policy IDs. Any one of these fails the job
+   - **promotion-gated** - 4 policy IDs. Advice in development, blocking in staging and production
+   - **advisory** - the rest. Noted, never blocking
+2. Fails the job if anything on the blocking list is present. That is the gate.
+3. Writes a Markdown report, ordered by severity, in plain English.
+4. Posts it as a comment on the pull request. One comment per environment, updated on every push.
+
+**Where the AI comes in, and where it does not:** with an API key, a language model writes the
+explanation and the ordering. Without one, the script produces the same report from local rules.
+**The model never decides pass or fail.** The lists do. If the model is unavailable the gate still
+works.
+
+**On the broken code**, the same 24 findings sort differently per environment:
+
+- Development: **10** stop the merge, **5** are advice, **9** are noted
+- Staging and production: **14** stop the merge, **5** are advice, **5** are noted
+
+The four that move from *noted* to *blocking* are the promotion-gated list.
+
+**Check it yourself:**
+
+```bash
+# on a laptop: run the triage by hand on the broken code, once for dev and once for prod
+.venv/bin/checkov -d terraform/insecure -o json --quiet > .scan/insecure.json
+.venv/bin/python scripts/ai_triage.py --input .scan/insecure.json --environment dev
+#   blocking=10 advisory=5 other=9
+.venv/bin/python scripts/ai_triage.py --input .scan/insecure.json --environment prod
+#   blocking=14 advisory=5 other=5
+
+# the three lists the decision comes from
+grep -nE '^(BLOCKING|PROMOTION_GATED|ADVISORY)_POLICIES' scripts/ai_triage.py
+
+# on GitHub: the comments the pipeline wrote on this pull request
+gh pr view 4 --comments
+```
+
+On the pull request page, scroll to the comments. Three, one per environment, each starting with
+the environment name and the counts.
 
 ## 9. The pull request is blocked
 
