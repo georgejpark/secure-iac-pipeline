@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------
 # Deploy: dev
-# Developer environment. One replica, smallest footprint, no boot
+# Developer environment. One replica, same size as production, no boot
 # persistence -- losing it costs an afternoon.
 #
 # This is the root that ACTUALLY APPLIES. It provisions the application tier as
@@ -55,8 +55,8 @@ module "workload" {
   environment   = "dev"
   vmid_base     = 301
   replica_count = 1
-  cores         = 1
-  memory_mb     = 512
+  cores         = 2
+  memory_mb     = 2048
   disk_gb       = 8
   bridge        = "vmbr1"
   subnet_prefix = "10.10.10"
