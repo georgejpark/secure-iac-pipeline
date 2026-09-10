@@ -4,16 +4,66 @@ The document I read while I present.
 
 ---
 
-# Introduction
+# Introduction  -  the first five minutes
 
-I am George Park. I work in operations and platform engineering. Kubernetes, Terraform, CI/CD,
-observability, across AWS and GCP.
+They asked for a short introduction before the presentation. Say this. Do not read it word for word,
+but do not improvise it either. It is about ninety seconds, which leaves room for them to ask
+something.
 
-For the last few years my job has been keeping platforms running and making the path to production
-safe for other people to use.
+---
 
-Today I want to teach you something I learned by accident, and then show you what I built because of
-it.
+## What I say
+
+Hi, I'm George Park.
+
+I work in operations and platform engineering. Day to day that means Kubernetes, Terraform, CI/CD
+pipelines, and monitoring, across AWS and GCP.
+
+Most of my career has been the same job in different shapes: keep the platform running, and make the
+safe path the easy path for the engineers using it. If doing the right thing is slower than doing the
+wrong thing, people will do the wrong thing. That is not a discipline problem, it is a design problem.
+
+Most recently I have been the platform lead on a retail analytics product. Backend services, a data
+warehouse behind them, an LLM service alongside. I owned the clusters, the deployment path, the
+observability, and the incident response.
+
+Two things from that job are why I am sitting here.
+
+The first is that I spent a lot of time on the boundary between security and delivery. Access
+control, secret handling, what gets to block a deployment and what does not. That boundary is where
+most of the friction lives, and it is the part I actually enjoy.
+
+The second is an outage. Our ingress controller was running a single replica. Nobody had decided
+that; it was just the default nobody revisited. When the node under it stalled, the whole environment
+went dark. Everything was green right up until it was not.
+
+That taught me the thing I keep coming back to. The dangerous problems are rarely the ones somebody
+did wrong. They are the ones the system quietly made easy to get wrong, and nobody had a reason to
+look.
+
+Today I want to show you one of those. It is about secrets in git, and I found it by accident during
+routine housekeeping.
+
+I have built a working pipeline to demonstrate it. It runs on hardware in my house, it is running
+right now, and I will make a change to production in front of you.
+
+---
+
+## If they ask "why Texas Mutual" or "why this role"
+
+Keep it short and specific. Do not oversell.
+
+> "It is a senior DevSecOps role at a company where security is not a side quest. Workers comp means
+> regulated data, real audit requirements, and a real cost when it goes wrong. I would rather build
+> guardrails somewhere the guardrails matter."
+
+---
+
+## If they ask what I am like to work with
+
+> "I write things down. Runbooks, incident notes, decision records. Partly so the next person does not
+> have to reconstruct it, and partly because writing it down is how I find out whether I actually
+> understand it."
 
 ---
 
