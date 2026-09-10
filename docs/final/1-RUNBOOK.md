@@ -320,6 +320,11 @@ Drop the **production approval** in Step 7. Approve staging only, and show dev a
 
 
 ## STEP 1  -  Tell the story          (4 min)
+**Say, as I start:**
+
+> "Before I show you anything, I want to tell you how this started. It's a story about one
+> repository, and it's the reason everything you'll see today exists. I'll keep it short."
+
 
 **Nothing shared. Just talk.**
 
@@ -345,6 +350,11 @@ Sixteen commits added keys over nine months. Every one passed code review.
 > The system made the wrong thing easy."
 
 ## STEP 2  -  The fix that fails      (2 min)
+**Say, as I start:**
+
+> "The second repository is the more interesting one, because that team noticed. And they did what
+> every team does when they notice."
+
 
 **Still nothing shared.**
 
@@ -358,6 +368,12 @@ Afterwards the repository looked clean.
 > "Let me show you what that achieved."
 
 ## STEP 3  -  Prove it                (6 min)
+**Say, as I share the server window:**
+
+> "Let me show you what that fix actually achieved. This is a throwaway repository on my server. It
+> is going to commit a password, delete it, ignore it, encrypt it - the three fixes that team applied
+> - and then I'll show you the password is still there. Press-enter pauses; I'll narrate."
+
 
 **Share the SERVER window.**
 
@@ -390,6 +406,12 @@ The script then shows it surviving a fresh clone. Let that land too.
 > Most people do it backwards."
 
 ## STEP 4  -  Show the checks working  (3 min)
+**Say, as I switch to the Mac:**
+
+> "That's the problem. Now the pipeline. This first command scans a copy of the Terraform that I
+> have deliberately broken - public bucket, open SSH, unencrypted database - and it checks it three
+> times, once for each environment. Watch the numbers."
+
 
 **Switch to the MAC window.**
 
@@ -426,6 +448,12 @@ No blocking findings.
 > off. So 10 stop the merge, 5 are advice, 9 are noted. Choosing which 10 is the actual job."
 
 ## STEP 5  -  Show the pull request    (4 min)
+**Say, as I open the browser:**
+
+> "Now the real change, the one this whole session is about. Production is running out of room
+> during month-end close. This pull request is one number: production goes from two servers to
+> three. What I want you to watch is everything that stands between that number and production."
+
 
 **Switch to the BROWSER, PR #4.**
 
@@ -455,6 +483,12 @@ Review required
 > records that I did."
 
 ## STEP 6  -  Merge it                 (2 min)
+**Say, before I press enter:**
+
+> "Merging is what authorises a deployment. Nothing deploys before this. I'm the only account on this
+> repository, so I'm going to merge with an administrator override, and GitHub records that I did. In
+> a team, a second engineer clicks here instead of me."
+
 
 **Switch to the SERVER window.**
 
@@ -466,6 +500,12 @@ gh pr merge 4 --squash --admin --delete-branch
 > "Merging is what authorises a deployment. Nothing deploys before this."
 
 ## STEP 7  -  Watch it build           (6 min)
+**Say, as the run appears:**
+
+> "Now watch it build. The checks run again on main first - secrets alone, then the infrastructure
+> scan three times. Then deploy: development on its own, staging and production each asking for a
+> person. Remember, right now there are zero application servers. By the end of this you'll see five."
+
 
 **Switch to the BROWSER, Actions tab. Refresh.**
 
@@ -592,6 +632,12 @@ this list, and the jobs keep running while you talk.
 
 
 ## STEP 8  -  Install and show the servers   (5 min)
+**Say, as I switch to the server:**
+
+> "Five machines that did not exist ten minutes ago. Terraform built them and never logged into
+> them - it talks to the Proxmox API and stops. Installing the application is a separate step, and I
+> keep it separate on purpose. Watch what it does the second time I run it."
+
 
 **Switch to the SERVER window.**
 
@@ -691,6 +737,10 @@ to meet you"* — the greeting I opened with, ninety minutes of build later, com
 machine that did not exist when I said it. **Do not explain it. Just let it sit for a beat.**
 
 ## STEP 9  -  Close                    (2 min)
+**Say, as I stop sharing:**
+
+> "Let me stop sharing. Three things I'd like you to take away, and then I'm yours."
+
 
 **Stop sharing. Face them.**
 
