@@ -22,7 +22,13 @@ repos:
     hooks:
       - id: check-merge-conflict
       - id: detect-private-key
+      # These two rewrite file CONTENT. Never let them near a binary: they strip
+      # trailing bytes and append a newline, which corrupts a zip container.
+      # A .docx is a zip. Found the hard way -- the first Word export committed
+      # was unopenable.
       - id: end-of-file-fixer
+        exclude: '\.(docx|xlsx|pptx|png|jpe?g|gif|pdf|zip|gz|tgz|ico|woff2?)$'
       - id: trailing-whitespace
+        exclude: '\.(docx|xlsx|pptx|png|jpe?g|gif|pdf|zip|gz|tgz|ico|woff2?)$'
       - id: check-yaml
         args: [--allow-multiple-documents]
