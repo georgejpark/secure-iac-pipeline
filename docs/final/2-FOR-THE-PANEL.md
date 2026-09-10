@@ -265,6 +265,145 @@ the release, which is why rolling back is a symlink move too.
 
 ---
 
+---
+
+# The four machines that ARE the pipeline
+
+Before any application server exists, four Linux containers are already running. They were built by
+hand, once, and nothing in Terraform manages them. **They are the pipeline itself.**
+
+If you only remember one thing from this section: **GitHub does not run any of this.** GitHub decides
+*what* should run and *when*. These four machines are *where* it runs.
+
+## Why they exist at all
+
+A GitHub-hosted runner is a machine in Microsoft's cloud. It cannot reach a Proxmox API or a database
+on a private network in my house without me exposing both to the internet. That is a worse trade than
+running the compute myself.
+
+So instead: three containers connect **outbound** to GitHub over HTTPS, ask "is there any work for
+me", and pull it down. **Nothing on the internet ever connects in.** There is no inbound firewall
+rule, no port forward, and no public address.
+
+## How a job finds the right machine
+
+Every runner registers with a **label**. Every job declares which label it wants.
+
+```yaml
+runs-on: [self-hosted, "${{ matrix.environment }}"]
+```
+
+When the matrix runs the `prod` copy of a job, `matrix.environment` is `prod`, so the job can only
+land on the runner labelled `prod`. **That single line is the isolation boundary.**
+
+## 201 - ci-dev - 10.10.10.10 - label `dev`
+
+| | |
+|---|---|
+| **What it is** | GitHub Actions runner for development |
+| **Holds** | The **dev** age key, dev database credentials, Terraform 1.5.7, gitleaks 8.30.1 |
+| **Cannot** | Decrypt stage or prod secrets. Reach the stage or prod networks |
+| **Runs** | The **secrets job for every environment**, the dev IaC scan, and the dev deploy |
+
+**Why the secret scan runs here specifically.** Scanning source needs no credentials, so it is given
+none. The job that reads the most code runs on the machine with the least privilege. Least privilege
+applied to a job, not just to a user.
+
+## 202 - ci-stage - 10.20.10.10 - label `stage`
+
+| | |
+|---|---|
+| **What it is** | GitHub Actions runner for staging |
+| **Holds** | The **stage** age key and stage database credentials, and nothing else |
+| **Cannot** | Open the dev or prod encrypted files, even though it has a copy of both |
+| **Runs** | The stage IaC scan, and the stage deploy after somebody approves |
+
+## 203 - ci-prod - 10.30.10.10 - label `prod`
+
+| | |
+|---|---|
+| **What it is** | GitHub Actions runner for production |
+| **Holds** | The **prod** age key. This is the only machine on earth that can decrypt production |
+| **Cannot** | Receive a dev or stage job. GitHub will not route one to it |
+| **Runs** | The prod IaC scan, and the prod deploy after somebody approves and after stage finished |
+
+## 204 - tf-state - 10.40.10.10 - PostgreSQL 17, not a runner
+
+| | |
+|---|---|
+| **What it is** | A database. It runs no pipeline code and answers only queries |
+| **Holds** | Three separate databases: `tfstate_dev`, `tfstate_stage`, `tfstate_prod` |
+| **Roles** | `tf_dev`, `tf_stage`, `tf_prod`, one per database |
+| **Reachable on** | Port 5432 only, and only from the three environment networks |
+
+**What Terraform state is, and why it needs a database.** Terraform has to remember what it built last
+time. Without that record it would build duplicates on every run, and it would have no idea which
+container corresponds to which line of code.
+
+That record could be a file. It is a database here for one reason: **locking.** The Postgres backend
+takes an advisory lock for the duration of an apply. Two deploys running at once against the same
+state file corrupt it, and that is not theoretical.
+
+**How it is protected.** `pg_hba.conf` pins each role to its own subnet:
+
+```
+host    tfstate_dev     tf_dev      10.10.10.0/24    scram-sha-256
+host    tfstate_stage   tf_stage    10.20.10.0/24    scram-sha-256
+host    tfstate_prod    tf_prod     10.30.10.0/24    scram-sha-256
+```
+
+Hand the dev runner the correct production password and it is **still refused**, because the source
+address is checked before the password is.
+
+## How they map onto the workflow
+
+| Workflow step | Machine | Why that one |
+|---|---|---|
+| Secrets job, gitleaks over full history | **201 ci-dev** | Needs no credentials, so it gets none |
+| IaC scan (dev) | **201 ci-dev** | Only machine that can decrypt dev |
+| IaC scan (stage) | **202 ci-stage** | Only machine that can decrypt stage |
+| IaC scan (prod) | **203 ci-prod** | Only machine that can decrypt prod |
+| Terraform init, any environment | that env's runner to **204** | Port 5432, its own database, from its own subnet |
+| Deploy (dev), automatic | **201 ci-dev** | Calls the Proxmox API with token `terraform@pve!ci-dev` |
+| Deploy (stage), after approval | **202 ci-stage** | Token `terraform@pve!ci-stage` |
+| Deploy (prod), after approval | **203 ci-prod** | Token `terraform@pve!ci-prod` |
+| Install the application | **the Proxmox host** | Not a runner at all. See below |
+
+## Why three runners rather than one
+
+With one runner, a pull request that touches development executes on the machine holding the
+production key. Anyone who can open a pull request can then run arbitrary code next to that key.
+**That is a privilege escalation path from dev to prod**, and it is removed by having three machines
+rather than by writing a policy asking people not to do it.
+
+## What the runners deliberately cannot do
+
+They cannot install the application. Terraform calls the Proxmox API to build a machine and stops
+there; it never logs in, and the runner holds no SSH key for a workload.
+
+**Be precise about this one, because it is easy to overclaim.** The runner sits on the **same /24**
+as its own environment's containers, so at the network level it could reach them. What the host
+forward policy blocks is reaching **another** environment: all six ordered pairs between dev, stage
+and prod are dropped. So this is a **separation of duties**, not a network impossibility.
+
+Keeping install separate means rebuilding a server is not redeploying the application, and
+redeploying the application is not rebuilding a server.
+
+## What breaks if you collapse them
+
+| Collapse | What you lose |
+|---|---|
+| Three runners into one | The dev-to-prod escalation path comes back |
+| Three age keys into one | A compromised dev build can decrypt production |
+| Three databases into one | One role can read or corrupt another environment's state |
+| The database into a state file | No locking. Two concurrent applies corrupt state |
+| Self-hosted back to GitHub-hosted | The Proxmox API and the database have to face the internet |
+
+Each of those four containers exists because removing it removes a specific control, and the table
+above is the answer to "why is this not simpler".
+
+---
+
 # The pipeline in detail: the YAML, gitleaks and Checkov
 
 Everything above describes what happens. This section is how it is actually wired, for anyone who

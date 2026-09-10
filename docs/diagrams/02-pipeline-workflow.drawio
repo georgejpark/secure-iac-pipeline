@@ -129,7 +129,7 @@
           style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#C77700;fontSize=13;fontStyle=1;align=center;"
           vertex="1" parent="1"><mxGeometry x="70" y="1550" width="1415" height="60" as="geometry"/></mxCell>
 
-        <mxCell id="inst" value="SEPARATE STAGE &#8212; the application install, run from the HOST, not the runner&#10;&#10;/root/install-app.sh &lt;env&gt;&#10;&#10;Terraform builds machines through the Proxmox API and NEVER logs into them.&#10;The runners have no SSH key to the workloads and no route to them."
+        <mxCell id="inst" value="SEPARATE STAGE &#8212; the application install, run from the HOST, not the runner&#10;&#10;/root/install-app.sh &lt;env&gt;&#10;&#10;Terraform builds machines through the Proxmox API and NEVER logs into them.&#10;The runner holds no SSH key for a workload. It IS on the same /24 as its own&#10;containers, so this is separation of duties, not a network impossibility.&#10;What the forward policy blocks is reaching ANOTHER environment."
           style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#6B4E9E;fontSize=12;align=left;spacingLeft=12;verticalAlign=top;spacingTop=10;"
           vertex="1" parent="1"><mxGeometry x="70" y="1640" width="680" height="170" as="geometry"/></mxCell>
         <mxCell id="inst2" value="Per container, only if not already serving:&#10;&#10;1 create service account 'rapta' &#8212; never root&#10;2 install python3 / curl / python3-venv if missing&#10;3 copy release into releases/&lt;version&gt;&#10;4 build a venv inside that release folder&#10;5 move ONE symlink: current &#8594; releases/&lt;version&gt;&#10;6 install the systemd unit, pointing at 'current'&#10;7 wait for /health before reporting success"

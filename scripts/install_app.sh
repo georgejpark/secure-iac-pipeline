@@ -5,10 +5,12 @@
 # Installs the inspection service on every app container in one environment.
 #
 # Why this is a separate step and not part of the pipeline:
-#   The CI runner for each environment sits on its own network and deliberately
-#   has no route to the application network. Terraform talks to the Proxmox API
-#   to build machines; it never logs into them. So installing the application is
-#   a separate stage that runs here on the host.
+#   Terraform talks to the Proxmox API to build machines; it never logs into
+#   them, and the runner holds no SSH key for a workload. This is a separation
+#   of duties, not a network impossibility -- the runner sits on the SAME /24 as
+#   its own environment's containers and could reach them. What it cannot reach
+#   is any OTHER environment. So installing the application is a separate stage
+#   that runs here on the host.
 #
 # Safe to run repeatedly. A container that is already serving is skipped.
 

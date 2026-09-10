@@ -465,6 +465,88 @@ Dev builds 301, stage builds 311, prod builds 321, 322 and 323 together. Prod ta
 > "Production is building three machines because the file now says three. It would have built two
 > this morning."
 
+
+### Walk the pipeline in detail  -  do this while the jobs run
+
+The jobs take time. Do not stand there watching a spinner. **Click into them and narrate.** This is
+where the automation gets explained, and it costs no extra minutes because it happens during the wait.
+
+**1. The job graph, before clicking anything.**
+
+Point at the shape: Secrets alone at the top, then three IaC jobs side by side, then three Deploy jobs
+in a line.
+
+> "Three jobs. Secrets runs first and alone, and nothing else starts until it passes. Then the
+> infrastructure scan runs three times in parallel, once per environment. Then deploy, one at a time."
+
+**2. Show that these are my machines, not GitHub's.**
+
+Click the **Secrets** job. In the log header it names the runner it landed on.
+
+> "That is a container in my house. GitHub scheduled the job; my hardware ran it. The runner connected
+> outbound and pulled the work down. There is no inbound firewall rule and no public address."
+
+**3. Inside the Secrets job - gitleaks.**
+
+Expand **Scan the entire repository history**.
+
+> "This is gitleaks reading every commit ever made, not just the current files. That is the
+> `fetch-depth: 0` line in the workflow. Without it the scan sees one commit, and the password that
+> was committed last week and deleted yesterday is invisible. That is the exact case I showed you in
+> step 3."
+
+Point at `--exit-code 1`.
+
+> "That flag is what makes this a gate rather than a report."
+
+**4. Inside an IaC job - Checkov and the triage.**
+
+Go back and click **IaC (prod)**. Expand **Checkov**, then **AI triage**.
+
+> "Checkov just found two dozen things. Notice the job did not fail. It runs with `--soft-fail` on
+> purpose. Checkov reports; it does not decide."
+
+> "The decision is the next step. That script reads Checkov's JSON and checks it against a list of
+> ten policy IDs in development, fourteen in staging and production. The list is in the repository, so
+> changing what blocks a merge is itself a reviewed change."
+
+If they ask about the fourteen versus ten:
+
+> "The extra four are things development is allowed to skip: deletion protection, Multi-AZ, log
+> export, enhanced monitoring. Development is allowed to be cheaper, and the pipeline says so out
+> loud instead of pretending every environment is equal."
+
+**5. Show the isolation, using the runner names.**
+
+Open **IaC (dev)** and **IaC (prod)** in turn and point at the two different runner names.
+
+> "Same code, three copies, three different machines. The production job can only land on the
+> production runner, because of one line: `runs-on: [self-hosted, matrix.environment]`. A pull request
+> that touches development never executes on the machine that holds the production key."
+
+**6. Inside a Deploy job - the part that builds something.**
+
+Once **Deploy (dev)** is running, click it and walk the steps in order.
+
+| Step to expand | What to say |
+|---|---|
+| Decrypt credentials (SOPS) | "It decrypted with a key that exists only on this runner. Notice the values are masked, even in a log only I can see." |
+| Terraform init | "Connecting to its own database on the state machine. Its own schema, its own role." |
+| Terraform plan | "One to add. This is the plan, saved to a file." |
+| Policy check | "Checkov has no rules for Proxmox, so this checks the plan directly. Unprivileged, boot on, delete protection. Production has to pass all three." |
+| Terraform apply | "It applies the saved plan file, not a fresh one. What was checked is what gets built, with no window in between." |
+
+**7. The approval gate itself.**
+
+When staging pauses, point at **Review pending deployments** before clicking it.
+
+> "That is a GitHub Environment with a required reviewer. It is configured in repository settings, not
+> in the workflow file, which means a pull request cannot change it."
+
+**If they interrupt at any point, stop the walkthrough.** A question is worth more than the rest of
+this list, and the jobs keep running while you talk.
+
+
 ## STEP 8  -  Install and show the servers   (5 min)
 
 **Switch to the SERVER window.**

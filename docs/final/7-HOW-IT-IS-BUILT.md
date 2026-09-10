@@ -390,7 +390,7 @@ Steps 3 to 20 are the pipeline. Step 21 is the deploy step. Step 22 is the proof
 
 **Dev applies automatically; stage and prod wait.** Blocking dev on production-grade controls is how a team learns to route around the pipeline. Letting prod apply on merge is how an incident starts. The gate is where the cost of being wrong changes.
 
-**Terraform never logs into a container.** It calls the Proxmox API and stops. The runner has no SSH key to the workloads and no route to them either. The install is a separate step from the host. Narrower than a runner that can do everything; honest about where the boundary is today.
+**Terraform never logs into a container.** It calls the Proxmox API and stops. The runner holds no SSH key for a workload. Note what this is and is not: the runner sits on the **same /24** as its own environment's containers and could reach them at the network level. What the forward policy blocks is reaching **another** environment. So this is a separation of duties, not a network impossibility, and it is worth saying that precisely rather than overclaiming. The install is a separate step from the host. Narrower than a runner that can do everything; honest about where the boundary is today.
 
 **The per-environment policy tiers.** Dev is allowed to be cheaper: no boot persistence, no delete protection. Stage must survive a reboot. Prod must survive a reboot and a mistaken `terraform destroy`. The policy table says so in one place, and says why.
 
