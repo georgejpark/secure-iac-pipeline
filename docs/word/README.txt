@@ -21,3 +21,6 @@ NOT INCLUDED: the three draw.io diagrams in docs/diagrams/ are vector source and
 do not embed in Word. Open them at app.diagrams.net and use File > Export as >
 PNG if you need them inside a document. Doc 7 does embed the existing
 system-architecture.png.
+
+Highlighting the runbook:
+  .venv/bin/python scripts/highlight_runbook.py     # after re-exporting 1-RUNBOOK.docx; yellow = spoken
