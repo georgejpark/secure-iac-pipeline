@@ -270,6 +270,14 @@ platform builds is gone.
 
 # PART C  -  THE DEMO                 (6-34 min)
 
+**How to read this part.** Three kinds of line:
+
+- **SAY:** in a grey quote box - spoken, word for word. Nothing else is spoken.
+- **Bold** - something I do: a window to switch to, a command to type, a thing to click.
+- Plain text and code blocks - what to expect on screen, and notes for me. Not read aloud.
+
+The **"Say, as I start"** box under each STEP heading is the first thing I say in that step.
+
 ## How the next thirty minutes go
 
 ```
@@ -346,7 +354,7 @@ Nobody cut corners. They followed the process. **The process was the problem.**
 
 Sixteen commits added keys over nine months. Every one passed code review.
 
-> "When something is wrong for nine months and nobody catches it, it is almost never carelessness.
+> **SAY:** "When something is wrong for nine months and nobody catches it, it is almost never carelessness.
 > The system made the wrong thing easy."
 
 ## STEP 2  -  The fix that fails      (2 min)
@@ -365,7 +373,7 @@ files"*. They deleted the file, added it to gitignore, wrote an encryption tool.
 
 Afterwards the repository looked clean.
 
-> "Let me show you what that achieved."
+> **SAY:** "Let me show you what that achieved."
 
 ## STEP 3  -  Prove it                (6 min)
 **Say, as I share the server window:**
@@ -392,16 +400,16 @@ Talk over the first four steps:
 
 **When `git show` runs, stop talking.** Let them read the passwords on the screen.
 
-> "Every password still there. One command. No special access."
+> **SAY:** "Every password still there. One command. No special access."
 
-> "Git keeps every version of every file. Deleting removes the pointer, not the file. And it travels
+> **SAY:** "Git keeps every version of every file. Deleting removes the pointer, not the file. And it travels
 > with every clone."
 
 The script then shows it surviving a fresh clone. Let that land too.
 
 **Finish with the order:**
 
-> "Two things work, and the order matters more than the steps. Change the password first, that takes
+> **SAY:** "Two things work, and the order matters more than the steps. Change the password first, that takes
 > minutes. Rewriting the history takes days, because you have to reach every fork and every laptop.
 > Most people do it backwards."
 
@@ -427,9 +435,9 @@ stage    exit=1  blocking=14
 prod     exit=1  blocking=14
 ```
 
-> "This is deliberately bad Terraform. Same code, checked three times."
+> **SAY:** "This is deliberately bad Terraform. Same code, checked three times."
 
-> "Development blocks 10 things. Staging and production block 14. The extra four are things
+> **SAY:** "Development blocks 10 things. Staging and production block 14. The extra four are things
 > development is allowed to skip. Losing a development box costs an afternoon."
 
 **Then show it passing:**
@@ -444,7 +452,7 @@ No blocking findings.
 
 **Then the number that matters:**
 
-> "The scanner finds 24 problems in 110 lines of code. Nobody reads 24 findings, they turn the tool
+> **SAY:** "The scanner finds 24 problems in 110 lines of code. Nobody reads 24 findings, they turn the tool
 > off. So 10 stop the merge, 5 are advice, 9 are noted. Choosing which 10 is the actual job."
 
 ## STEP 5  -  Show the pull request    (4 min)
@@ -468,17 +476,17 @@ Review required
 
 **3. The green ticks above it.**
 
-> "Every check passed. Secrets, and the infrastructure scan for all three environments. It is still
+> **SAY:** "Every check passed. Secrets, and the infrastructure scan for all three environments. It is still
 > blocked, because the checks are not the only gate."
 
 **4. Scroll up to the comments.** Three, one per environment.
 
-> "The pipeline wrote these. It sorts the findings and explains them in plain English, so the person
+> **SAY:** "The pipeline wrote these. It sorts the findings and explains them in plain English, so the person
 > reviewing does not have to read raw scanner output."
 
 **5. Then say:**
 
-> "I cannot approve this myself. GitHub refuses outright. In a real team a second engineer approves
+> **SAY:** "I cannot approve this myself. GitHub refuses outright. In a real team a second engineer approves
 > here. I am the only account on this repository, so I will merge with an admin override, and GitHub
 > records that I did."
 
@@ -497,7 +505,7 @@ cd /root/secure-iac-pipeline
 gh pr merge 4 --squash --admin --delete-branch
 ```
 
-> "Merging is what authorises a deployment. Nothing deploys before this."
+> **SAY:** "Merging is what authorises a deployment. Nothing deploys before this."
 
 ## STEP 7  -  Watch it build           (6 min)
 **Say, as the run appears:**
@@ -532,7 +540,7 @@ Deploy (prod)    Queued
 order. It flips to *Waiting for review* on its own once stage is green. Do not read "Queued" as a
 problem.
 
-> "Development went out by itself. Staging stopped and is asking for a person. Production is queued
+> **SAY:** "Development went out by itself. Staging stopped and is asking for a person. Production is queued
 > behind it - it will not even ask until staging is done."
 
 **Approve staging.** A yellow bar appears: **Review pending deployments**. Click it, tick **stage**,
@@ -540,13 +548,13 @@ click **Approve and deploy**. About 30 seconds, then green.
 
 **Then, once stage is green, production flips to *Waiting for review*. Approve it the same way.**
 
-> "Development goes out on its own. Staging and production each need a person to say yes. That is the
+> **SAY:** "Development goes out on its own. Staging and production each need a person to say yes. That is the
 > whole promotion model."
 
 **Because everything was torn down before we started, this run builds all five containers, not one.**
 Dev builds 301, stage builds 311, prod builds 321, 322 and 323 together. Prod takes the longest.
 
-> "Production is building three machines because the file now says three. It would have built two
+> **SAY:** "Production is building three machines because the file now says three. It would have built two
 > this morning."
 
 
@@ -560,43 +568,43 @@ where the automation gets explained, and it costs no extra minutes because it ha
 Point at the shape: Secrets alone at the top, then three IaC jobs side by side, then three Deploy jobs
 in a line.
 
-> "Three jobs. Secrets runs first and alone, and nothing else starts until it passes. Then the
+> **SAY:** "Three jobs. Secrets runs first and alone, and nothing else starts until it passes. Then the
 > infrastructure scan runs three times in parallel, once per environment. Then deploy, one at a time."
 
 **2. Show that these are my machines, not GitHub's.**
 
 Click the **Secrets** job. In the log header it names the runner it landed on.
 
-> "That is a container in my house. GitHub scheduled the job; my hardware ran it. The runner connected
+> **SAY:** "That is a container in my house. GitHub scheduled the job; my hardware ran it. The runner connected
 > outbound and pulled the work down. There is no inbound firewall rule and no public address."
 
 **3. Inside the Secrets job - gitleaks.**
 
 Expand **Scan the entire repository history**.
 
-> "This is gitleaks reading every commit ever made, not just the current files. That is the
+> **SAY:** "This is gitleaks reading every commit ever made, not just the current files. That is the
 > `fetch-depth: 0` line in the workflow. Without it the scan sees one commit, and the password that
 > was committed last week and deleted yesterday is invisible. That is the exact case I showed you in
 > step 3."
 
 Point at `--exit-code 1`.
 
-> "That flag is what makes this a gate rather than a report."
+> **SAY:** "That flag is what makes this a gate rather than a report."
 
 **4. Inside an IaC job - Checkov and the triage.**
 
 Go back and click **IaC (prod)**. Expand **Checkov**, then **AI triage**.
 
-> "Checkov just found two dozen things. Notice the job did not fail. It runs with `--soft-fail` on
+> **SAY:** "Checkov just found two dozen things. Notice the job did not fail. It runs with `--soft-fail` on
 > purpose. Checkov reports; it does not decide."
 
-> "The decision is the next step. That script reads Checkov's JSON and checks it against a list of
+> **SAY:** "The decision is the next step. That script reads Checkov's JSON and checks it against a list of
 > ten policy IDs in development, fourteen in staging and production. The list is in the repository, so
 > changing what blocks a merge is itself a reviewed change."
 
 If they ask about the fourteen versus ten:
 
-> "The extra four are things development is allowed to skip: deletion protection, Multi-AZ, log
+> **SAY:** "The extra four are things development is allowed to skip: deletion protection, Multi-AZ, log
 > export, enhanced monitoring. Development is allowed to be cheaper, and the pipeline says so out
 > loud instead of pretending every environment is equal."
 
@@ -604,7 +612,7 @@ If they ask about the fourteen versus ten:
 
 Open **IaC (dev)** and **IaC (prod)** in turn and point at the two different runner names.
 
-> "Same code, three copies, three different machines. The production job can only land on the
+> **SAY:** "Same code, three copies, three different machines. The production job can only land on the
 > production runner, because of one line: `runs-on: [self-hosted, matrix.environment]`. A pull request
 > that touches development never executes on the machine that holds the production key."
 
@@ -624,7 +632,7 @@ Once **Deploy (dev)** is running, click it and walk the steps in order.
 
 When staging pauses, point at **Review pending deployments** before clicking it.
 
-> "That is a GitHub Environment with a required reviewer. It is configured in repository settings, not
+> **SAY:** "That is a GitHub Environment with a required reviewer. It is configured in repository settings, not
 > in the workflow file, which means a pull request cannot change it."
 
 **If they interrupt at any point, stop the walkthrough.** A question is worth more than the rest of
@@ -645,12 +653,12 @@ this list, and the jobs keep running while you talk.
 pct list
 ```
 
-> "Five machines that did not exist ten minutes ago."
+> **SAY:** "Five machines that did not exist ten minutes ago."
 
 They are empty machines. Terraform built them; nothing has installed the application yet.
 **Say that out loud before anyone asks:**
 
-> "Terraform talks to the Proxmox API to build machines. It never logs into them. Installing the
+> **SAY:** "Terraform talks to the Proxmox API to build machines. It never logs into them. Installing the
 > application is a separate stage, and I keep it separate on purpose, so rebuilding a server does not
 > mean redeploying the application, and redeploying does not mean rebuilding."
 
@@ -687,7 +695,7 @@ done
   app-prod-3 (323)  already serving 1.1.0  - skipped
 ```
 
-> "It checks what each one is serving before it touches it. I can run this as many times as I like
+> **SAY:** "It checks what each one is serving before it touches it. I can run this as many times as I like
 > and it only acts where something is actually missing."
 
 ### What that script does
@@ -729,7 +737,7 @@ for h in 10.10.10.20 10.20.10.20 10.30.10.20 10.30.10.21 10.30.10.22; do
 done
 ```
 
-> "Five machines. Each one knows which environment it is, because it reads it from its own hostname.
+> **SAY:** "Five machines. Each one knows which environment it is, because it reads it from its own hostname.
 > Three in production, because the file now says three."
 
 **The callback.** Every one of those five just said *"Hello World, Hello Guys This is George and nice
@@ -752,14 +760,12 @@ wrong. Fix the system, not the people.
 **3.** The hard part is not running the scanner. It is choosing what is worth blocking, and being able
 to defend that choice to an engineer and to an auditor.
 
-> "Happy to go anywhere you would like with it."
+> **SAY:** "Happy to go anywhere you would like with it."
 
 ---
 
 
----
-
-# PART D  -  THE CLOSE
+---# PART D  -  THE CLOSE
 
 
 ## What they just watched
