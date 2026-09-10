@@ -819,6 +819,232 @@ tree, and proves it blocks: `dev exit=1 blocking=10`, `stage exit=1 blocking=14`
 
 ---
 
+---
+
+# Terraform, the scripts, and the application itself
+
+The sections above cover the machines and the scanners. This one covers everything else in the
+repository, and follows one change all the way to a container answering **"Hello World, Hello Guys
+This is George and nice to meet you"**.
+
+## Every file in the repository, and what it does
+
+| File | What it is |
+|---|---|
+| `.github/workflows/security-pipeline.yml` | The whole pipeline. One file, three jobs |
+| `.gitleaks.toml` | Secret-scanner rules and allowlist |
+| `.pre-commit-config.yaml` | The same checks, on the laptop, before a commit exists |
+| `.sops.yaml` | Which age key encrypts which environment's secrets |
+| `Makefile` | Local equivalents of what CI runs. If these pass, CI passes |
+| `scripts/ai_triage.py` | Turns Checkov findings into a decision. **The AWS gate** |
+| `scripts/policy_check.py` | Proxmox policy against the Terraform plan. **The container gate** |
+| `scripts/install_app.sh` | Installs the application onto containers that already exist |
+| `scripts/validate.sh` | Every host-side check, including the three isolation boundaries |
+| `scripts/demo_secret_persistence.sh` | The STEP 3 proof that deleting a secret does not remove it |
+| `terraform/bootstrap/github-oidc.tf` | The OIDC trust so GitHub can assume an AWS role with no stored key |
+| `terraform/envs/{dev,stage,prod}/` | The **AWS platform tier**. Scanned by Checkov, not applied in this demo |
+| `terraform/modules/claims-platform/` | The AWS module those environments call |
+| `terraform/deploy/{dev,stage,prod}/` | The **Proxmox application tier**. This is what actually applies |
+| `terraform/modules/workload/` | The module that builds a container |
+| `terraform/insecure/main.tf` | Deliberately bad Terraform, to prove the gate blocks |
+
+## Two Terraform trees, and why
+
+This trips people up, so say it before they ask.
+
+| | `terraform/envs/` | `terraform/deploy/` |
+|---|---|---|
+| Builds | AWS: VPC, RDS, S3, security groups | Proxmox LXC containers |
+| Provider | `hashicorp/aws` | `bpg/proxmox` |
+| Applied in this demo? | **No.** Scanned only | **Yes.** This is what builds the servers |
+| Gated by | Checkov + `ai_triage.py` | `policy_check.py` |
+| Why it exists | The realistic target. It is what an insurer's platform looks like, and it is what Checkov has rules for | The thing I can actually build in front of you on hardware I own |
+
+> "The AWS tree is the shape of the real thing and it is fully scanned. The Proxmox tree is the part I
+> can build live. The pipeline is identical; only the last command differs."
+
+## What the workload module actually creates
+
+`terraform/modules/workload/main.tf`, one resource, `count = var.replica_count`:
+
+```hcl
+resource "proxmox_virtual_environment_container" "app" {
+  count     = var.replica_count
+  vm_id     = var.vmid_base + count.index
+
+  unprivileged  = true              # policy PVE-1, every environment
+  start_on_boot = var.start_on_boot # policy PVE-3, stage and prod
+  protection    = var.protect       # policy PVE-4, prod only
+  started       = true
+
+  initialization {
+    hostname = "app-${var.environment}-${count.index + 1}"
+    user_account { keys = var.admin_ssh_keys }
+    dns         { servers = var.dns_servers }
+    ip_config { ipv4 {
+      address = "${var.subnet_prefix}.${var.host_octet_base + count.index}/24"
+      gateway = var.gateway
+    } }
+  }
+
+  operating_system { template_file_id = var.template, type = "debian" }
+  cpu    { cores     = var.cores }
+  memory { dedicated = var.memory_mb }
+  disk   { size      = var.disk_gb }
+
+  network_interface { name = "eth0", bridge = var.bridge, firewall = false }
+}
+```
+
+Per environment, only these differ:
+
+| | dev | stage | prod |
+|---|---|---|---|
+| `vmid_base` | 301 | 311 | 321 |
+| `replica_count` | 1 | 1 | 2, **3 after this change** |
+| `start_on_boot` | false | true | true |
+| `protect` | false | false | **true** |
+| Bridge / subnet | vmbr1 / 10.10.10 | vmbr2 / 10.20.10 | vmbr3 / 10.30.10 |
+
+**Two comments in that file are worth reading aloud if anyone asks about them.**
+
+**The host octet is a fixed offset, not derived from the VMID.** Deriving it put `app-dev-1` on
+`10.10.10.1`, which is the gateway, because `301 % 100 = 1`. The layout is now explicit: `.1` is the
+bridge, `.10` is the CI runner, `.20` upward are workloads.
+
+**`firewall = false` is deliberate.** The Proxmox per-container firewall inserts an extra bridge in
+front of the NIC, and with it on the container loses return traffic for outbound connections. DNS and
+apt both break, regardless of policy. Isolation does not depend on that flag; it is enforced by the
+host forward policy and verified in both directions. It bought nothing and broke the workload, so it
+is off, **and the reason is written in the file rather than left for the next person to rediscover.**
+
+## The application
+
+Four files. They live on the Proxmox host at `/opt/app-source/`.
+
+**`app.py`** — a standard-library HTTP server, no framework, about 80 lines. Three endpoints:
+
+| Endpoint | Returns |
+|---|---|
+| `/health` | `{"status": "ok"}`, or **503 `{"status": "starting"}` for the first 2 seconds** |
+| `/version` | `{"version": "1.1.0"}`, read from the `VERSION` file next to the script |
+| `/` and `/hello` | The greeting, plus environment, host and version |
+
+```python
+host = socket.gethostname()
+env  = host.split("-")[1] if "-" in host else "unknown"
+self._json(200, {
+    "message": "Hello World, Hello Guys This is George and nice to meet you",
+    "environment": env,
+    "host": host,
+    "version": _read_version(),
+})
+```
+
+**That is how a container knows it is production.** Terraform sets the hostname to
+`app-prod-3`; the application splits on the hyphen and reads `prod`. Nothing is passed in, no config
+file is templated, and there is no environment variable to get wrong.
+
+**The startup grace is deliberate.** For two seconds after start, `/health` answers 503. A deploy
+check that fires immediately after a restart would race and report a false failure. The install
+script waits for a real 200.
+
+**`VERSION`** — one line, `1.1.0`. Read at request time, so `/version` reflects what is on disk.
+
+**`requirements.txt`** — intentionally empty. The app uses only the standard library. **A venv is
+still built**, so the deploy mirrors the shape of a real service that does have dependencies.
+
+**`inspection-service.service`** — the systemd unit:
+
+```ini
+[Service]
+User=rapta
+WorkingDirectory=/opt/rapta/inspection/current
+ExecStart=/opt/rapta/inspection/current/venv/bin/python /opt/rapta/inspection/current/app.py
+Restart=on-failure
+```
+
+**Every path says `current`, never a version number.** That is the whole rollback design: the unit
+never changes, so rolling back is moving one symlink and restarting.
+
+## `install_app.sh` — from empty container to serving
+
+Terraform builds machines and stops. This script puts the application on them. It is run from the
+**host**, and it is safe to run as many times as you like.
+
+For each container matching `app-<env>-*` that is **not already serving the target version**:
+
+| # | Step | Why it is that way |
+|---|---|---|
+| 1 | Create the `rapta` service account | The application never runs as root |
+| 2 | Install `python3`, `curl`, `python3-venv` if missing | Tests for `import ensurepip`, not for `python3 -m venv --help`, because the help text ships in the stdlib while the machinery is a separate package |
+| 3 | Copy the release to `releases/1.1.0` | The previous release stays on disk |
+| 4 | Build a venv **inside that release folder** | Two releases can need different packages without fighting |
+| 5 | Move one symlink, `current` to `releases/1.1.0` | **That pointer move is the release** |
+| 6 | Install the systemd unit and enable it | It points at `current`, never a version |
+| 7 | Poll `/health` until it returns 200 | Honours the two-second grace instead of racing it |
+
+The skip check is a real HTTP call, not a file marker:
+
+```bash
+if pct exec "$VMID" -- curl -fsS --max-time 3 http://127.0.0.1:8080/version 2>/dev/null \
+     | grep -q "\"${VERSION}\""; then
+  echo "  ${NAME} (${VMID})  already serving ${VERSION}  - skipped"
+  continue
+fi
+```
+
+> "It asks each machine what it is serving before deciding to touch it. That is why running it twice
+> is safe, and why it only ever acts where something is actually missing."
+
+## The whole chain, one change end to end
+
+| # | Where | What happens |
+|---|---|---|
+| 1 | Laptop | Edit `replica_count` 2 to 3. **pre-commit** runs gitleaks and `terraform fmt` before the commit exists |
+| 2 | GitHub | Push, open a pull request |
+| 3 | ci-dev | **gitleaks** reads every commit ever made. `--exit-code 1`. Nothing else runs until it passes |
+| 4 | all three runners | **Checkov** scans the AWS tree, `--soft-fail`, reporting only |
+| 5 | all three runners | **`ai_triage.py`** decides: 10 blocking in dev, 14 in stage and prod |
+| 6 | GitHub | Three PR comments. Four checks green. **Merge still blocked**, review required |
+| 7 | GitHub | Approve, then merge. **The merge is what authorises a deploy** |
+| 8 | ci-dev | Deploy dev, automatic. SOPS decrypt, init, plan, **`policy_check.py`**, apply |
+| 9 | Proxmox API | **Terraform** creates CT 301 from the Debian template, on vmbr1, at 10.10.10.20 |
+| 10 | GitHub | Deploy stage pauses. A person approves. CT 311 |
+| 11 | GitHub | Deploy prod pauses, and cannot start until stage finished. A person approves |
+| 12 | Proxmox API | Terraform creates CT 321, 322 and **323**, because the file now says three |
+| 13 | Host | **`install_app.sh prod`** — service account, venv, release folder, symlink, unit, health check |
+| 14 | Anywhere on that segment | `curl http://10.30.10.22:8080/` |
+
+```json
+{
+  "message": "Hello World, Hello Guys This is George and nice to meet you",
+  "environment": "prod",
+  "host": "app-prod-3",
+  "version": "1.1.0"
+}
+```
+
+**Six tools, in order: gitleaks, Checkov, ai_triage.py, Terraform, policy_check.py, install_app.sh.**
+Two of them are gates that stop a merge. One is a gate that stops a deploy. One builds machines. One
+installs software. One only ever reports.
+
+## One honest gap
+
+**The application source is not in this repository.** `app.py`, `VERSION`, `requirements.txt` and the
+systemd unit live on the Proxmox host at `/opt/app-source/` and are copied from there.
+
+That means the application is not version controlled alongside the infrastructure that runs it, it
+gets no code review, and gitleaks never scans it. In a real system it would be its own repository
+with its own pipeline, and this pipeline would consume a built artefact with a version number rather
+than copying files off a disk.
+
+It is called out here rather than left for someone to notice, because a pipeline that scans its
+infrastructure and not its application is only half a pipeline. Doc 6 has the fuller list of what
+this demo does not cover.
+
+---
+
 # Why each environment is separate
 
 Development, staging and production are on separate networks.
