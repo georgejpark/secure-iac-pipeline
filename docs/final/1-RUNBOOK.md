@@ -296,6 +296,23 @@ The **"Say, as I start"** box under each STEP heading is the first thing I say i
 
 They said they will ask questions while I go. Good. Every interruption is a conversation.
 
+## My steps versus the handout's steps
+
+The handout (doc 2) numbers the path a change takes, 1 to 19. My STEPs are what I do in the room.
+They are different sequences. **When I refer to the handout, use its numbers, not mine.**
+
+| My STEP | What the panel has on their handout | Say |
+|---|---|---|
+| 1 Tell the story | nothing - this is before the handout starts | - |
+| 2 The fix that fails | nothing | - |
+| 3 Prove it | step 1, a clone is the whole history | "this is why step 1 on your handout matters" |
+| 4 Show the checks working | steps 8 and 9 | "that is steps 8 and 9 on your handout, run by hand" |
+| 5 Show the pull request | steps 6 to 10 | "you are looking at steps 6 to 10" |
+| 6 Merge it | steps 11 and 12 | "steps 11 and 12" |
+| 7 Watch it build | steps 13 to 17 | "13 to 17 - dev, stage, prod, the plan check, the build" |
+| 8 Install and show | steps 18 and 19 | "the last two, 18 and 19" |
+| 9 Close | nothing | - |
+
 ---
 
 
