@@ -247,7 +247,10 @@ jobs:
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && inputs.deploy)
     strategy:
-      fail-fast: false
+      # fail-fast + one at a time = promotion: a failed (or rejected) dev
+      # deploy cancels stage and prod before they start. Only one deploy is
+      # ever running, so this never interrupts an apply in progress.
+      fail-fast: true
       max-parallel: 1        # dev, then stage, then prod
       matrix:
         environment: ${{ github.event_name == 'workflow_dispatch' && fromJSON(format('["{0}"]', inputs.environment)) || fromJSON('["dev","stage","prod"]') }}
