@@ -95,7 +95,7 @@ data "aws_iam_policy_document" "kms" {
 
 # --- Logging target ---------------------------------------------------------
 resource "aws_s3_bucket" "access_logs" {
-  bucket = "tm-access-logs-${var.environment}"
+  bucket = "access-logs-${var.environment}"
 }
 
 resource "aws_s3_bucket_public_access_block" "access_logs" {
