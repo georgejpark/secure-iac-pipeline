@@ -56,7 +56,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # REQUIRED. The default shallow clone fetches one commit, so a secret
           # committed earlier and deleted later -- the case that actually
@@ -72,14 +72,21 @@ jobs:
       #
       # A scanner that reports a pass while scanning nothing is worse than no
       # scanner, because it manufactures confidence. So: pin the version, scan
-      # the whole repository every time, and let it be slightly slower.
+      # the full history every time, and let it be slightly slower.
+      #
+      # --log-opts scopes the scan to the history of the commit being built.
+      # Without it gitleaks runs `git log --all`, and fetch-depth: 0 fetches
+      # every branch -- so one leaked token on any branch fails Gate 1 for
+      # main and every other pull request too. That branch is blocked by its
+      # own run; everything else should not be.
       - name: Confirm the pinned gitleaks is present
         run: gitleaks version
 
-      - name: Scan the entire repository history
+      - name: Scan the full history of this commit
         run: |
           gitleaks detect \
             --source . \
+            --log-opts="--full-history HEAD" \
             --config .gitleaks.toml \
             --redact \
             --verbose \
@@ -115,7 +122,7 @@ jobs:
       matrix:
         environment: [dev, stage, prod]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # No setup-python / setup-terraform here. The runner image already has
       # pinned Terraform and gitleaks, so a build cannot silently pick up a
@@ -203,7 +210,7 @@ jobs:
       - name: Comment on the PR
         if: github.event_name == 'pull_request' && always()
         continue-on-error: true
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body-path: triage-${{ matrix.environment }}.md
@@ -237,7 +244,7 @@ jobs:
         environment: ${{ github.event_name == 'workflow_dispatch' && fromJSON(format('["{0}"]', inputs.environment)) || fromJSON('["dev","stage","prod"]') }}
     environment: ${{ matrix.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Decrypt credentials (SOPS)
         id: sops
