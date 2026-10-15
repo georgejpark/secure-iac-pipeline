@@ -38,7 +38,7 @@ variable "environment" {
 # CKV_AWS_18  no access logging
 # CKV_AWS_145 not encrypted with KMS CMK
 resource "aws_s3_bucket" "claims_documents" {
-  bucket = "tm-claims-documents-${var.environment}"
+  bucket = "claims-documents-${var.environment}"
 
   tags = {
     Environment = var.environment

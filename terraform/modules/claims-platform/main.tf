@@ -125,7 +125,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "access_logs" {
 
 # --- Claims documents bucket ------------------------------------------------
 resource "aws_s3_bucket" "claims_documents" {
-  bucket = "tm-claims-documents-${var.environment}"
+  bucket = "claims-documents-${var.environment}"
 
   tags = {
     Environment = var.environment
