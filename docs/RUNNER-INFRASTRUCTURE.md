@@ -123,7 +123,7 @@ TOKEN=$(gh api -X POST repos/OWNER/REPO/actions/runners/registration-token --jq 
 
 ## The workload containers
 
-Separate from the runners. Provisioned by Terraform, configured by Ansible.
+Separate from the runners. Provisioned by Terraform, configured by `scripts/install_app.sh`.
 
 | | dev | stage | prod |
 |---|---|---|---|
