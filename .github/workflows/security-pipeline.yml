@@ -1,17 +1,22 @@
 name: Security Pipeline
 
-# Gates every change to the claims platform before it can reach an AWS account.
+# Gates every infrastructure change before it can reach an environment.
 #
-# Two properties this pipeline is designed around:
+# Three properties this pipeline is designed around:
 #
 #   1. Secret scanning runs FIRST and ALONE. A leaked credential is already an
 #      incident by the time CI sees it; a Terraform misconfiguration is still
 #      only a proposal. They do not deserve the same urgency.
 #
-#   2. There are NO long-lived AWS credentials anywhere in this repository.
-#      Authentication is GitHub OIDC federation -- GitHub mints a short-lived
-#      token, AWS trusts it for one specific repo/branch, and it expires in an
-#      hour. There is nothing in `secrets` for an attacker to steal.
+#   2. Nothing that can deploy is stored in GitHub. The state DB password and
+#      the Proxmox API token live in SOPS files committed encrypted, one age key
+#      per environment, and each private key exists only on that environment's
+#      runner. There is nothing in `secrets` for an attacker to steal. (The AWS
+#      tree under terraform/envs/ is scanned, never applied; applying it would
+#      use GitHub OIDC, not stored AWS keys.)
+#
+#   3. Every action is pinned to a full commit SHA, version in the comment. A
+#      tag can be moved to new code; a SHA cannot.
 
 on:
   pull_request:
@@ -56,7 +61,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           # REQUIRED. The default shallow clone fetches one commit, so a secret
           # committed earlier and deleted later -- the case that actually
@@ -97,7 +102,7 @@ jobs:
       - name: Upload gitleaks SARIF
         if: always()
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
           sarif_file: gitleaks.sarif
           category: gitleaks
@@ -122,7 +127,7 @@ jobs:
       matrix:
         environment: [dev, stage, prod]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       # No setup-python / setup-terraform here. The runner image already has
       # pinned Terraform and gitleaks, so a build cannot silently pick up a
@@ -188,7 +193,7 @@ jobs:
       - name: Upload SARIF
         if: always()
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
           sarif_file: results_sarif.sarif
           category: checkov-${{ matrix.environment }}
@@ -210,7 +215,7 @@ jobs:
       - name: Comment on the PR
         if: github.event_name == 'pull_request' && always()
         continue-on-error: true
-        uses: peter-evans/create-or-update-comment@v5
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body-path: triage-${{ matrix.environment }}.md
@@ -244,7 +249,7 @@ jobs:
         environment: ${{ github.event_name == 'workflow_dispatch' && fromJSON(format('["{0}"]', inputs.environment)) || fromJSON('["dev","stage","prod"]') }}
     environment: ${{ matrix.environment }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Decrypt credentials (SOPS)
         id: sops
