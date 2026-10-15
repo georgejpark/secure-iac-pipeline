@@ -6,9 +6,9 @@
 # pass, so a control that is on in prod cannot be quietly absent in dev.
 #
 # The security-relevant attributes here (unprivileged, firewall, protection,
-# start_on_boot) are enforced by the custom Checkov policies in
-# .checkov/custom_policies/ -- written for this codebase, because Checkov ships
-# no Proxmox rules of its own.
+# start_on_boot) are enforced by scripts/policy_check.py, which the Deploy job
+# runs against the Terraform PLAN before apply -- written for this codebase,
+# because Checkov ships no Proxmox rules of its own.
 # ---------------------------------------------------------------------------
 
 terraform {
