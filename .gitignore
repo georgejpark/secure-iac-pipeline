@@ -13,6 +13,9 @@ credentials
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
+# ...except the deploy roots: the provider version and its checksums are part of
+# what was reviewed. Update deliberately with `terraform init -upgrade` in a PR.
+!terraform/deploy/*/.terraform.lock.hcl
 crash.log
 checkov-report/
 results.sarif
