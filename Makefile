@@ -5,7 +5,7 @@ PY    := $(VENV)/bin/python
 ENVS  := dev stage prod
 
 .DEFAULT_GOAL := help
-.PHONY: help install fmt validate scan secrets demo clean all
+.PHONY: help install fmt validate scan scan-insecure opa secrets demo clean all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -50,8 +50,14 @@ scan-insecure: ## Prove the gate blocks: scan the deliberately vulnerable tree
 	done
 	@echo "  (non-zero exit is the expected, correct result here)"
 
-secrets: ## gitleaks across the full history
-	gitleaks detect --config .gitleaks.toml --redact -v
+opa: ## The PVE policies in Rego: unit tests, then a passing and a failing plan
+	opa test policy/terraform -v
+	conftest test --policy policy/terraform policy/testdata/plan-prod-pass.json
+	@conftest test --policy policy/terraform policy/testdata/plan-prod-fail.json \
+	  || echo "  (exit 1 is the expected, correct result for the failing plan)"
+
+secrets: ## gitleaks across the full history of HEAD, as CI runs it
+	gitleaks detect --config .gitleaks.toml --log-opts="--full-history HEAD" --redact -v
 
 demo: ## The live demo: why deleting a secret does not remove it
 	@./scripts/demo_secret_persistence.sh

@@ -1,0 +1,111 @@
+{
+  "_comment": "Sample plan for the Rego demo, shaped like `terraform show -json tfplan` (trimmed).",
+  "format_version": "1.2",
+  "terraform_version": "1.5.7",
+  "configuration": {
+    "root_module": {
+      "module_calls": {
+        "workload": {
+          "source": "../../modules/workload",
+          "expressions": {
+            "environment": {
+              "constant_value": "prod"
+            },
+            "replica_count": {
+              "constant_value": 3
+            }
+          }
+        }
+      }
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "module.workload.proxmox_virtual_environment_container.app[0]",
+      "module_address": "module.workload",
+      "mode": "managed",
+      "type": "proxmox_virtual_environment_container",
+      "name": "app",
+      "index": 0,
+      "provider_name": "registry.terraform.io/bpg/proxmox",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "vm_id": 321,
+          "node_name": "pve2",
+          "unprivileged": true,
+          "start_on_boot": true,
+          "protection": true,
+          "network_interface": [
+            {
+              "name": "eth0",
+              "bridge": "vmbr3",
+              "firewall": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "address": "module.workload.proxmox_virtual_environment_container.app[1]",
+      "module_address": "module.workload",
+      "mode": "managed",
+      "type": "proxmox_virtual_environment_container",
+      "name": "app",
+      "index": 1,
+      "provider_name": "registry.terraform.io/bpg/proxmox",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "vm_id": 322,
+          "node_name": "pve2",
+          "unprivileged": true,
+          "start_on_boot": true,
+          "protection": true,
+          "network_interface": [
+            {
+              "name": "eth0",
+              "bridge": "vmbr3",
+              "firewall": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "address": "module.workload.proxmox_virtual_environment_container.app[2]",
+      "module_address": "module.workload",
+      "mode": "managed",
+      "type": "proxmox_virtual_environment_container",
+      "name": "app",
+      "index": 2,
+      "provider_name": "registry.terraform.io/bpg/proxmox",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "vm_id": 323,
+          "node_name": "pve2",
+          "unprivileged": false,
+          "start_on_boot": true,
+          "protection": false,
+          "network_interface": [
+            {
+              "name": "eth0",
+              "bridge": "vmbr3",
+              "firewall": false
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
