@@ -3,9 +3,9 @@
 
 ### Secrets in git, and a pipeline that stops them reaching production
 
-George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
+George Park  ·  Senior DevSecOps
 
-*Document 5 of 7 — Every machine, what it holds, and what it does.*
+*Every machine, what it holds, and what it does.*
 
 ---
 

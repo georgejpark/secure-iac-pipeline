@@ -1,3 +1,0 @@
-
-blocking=14 advisory=5 other=5
-::error::14 blocking security finding(s); see the PR comment

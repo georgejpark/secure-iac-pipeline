@@ -3,9 +3,9 @@
 
 ### Secrets in git, and a pipeline that stops them reaching production
 
-George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
+George Park  ·  Senior DevSecOps
 
-*Document 4 of 7 — Every tool in the pipeline, and what it is for.*
+*Every tool in the pipeline, and what it is for.*
 
 ---
 

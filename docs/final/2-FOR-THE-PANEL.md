@@ -3,9 +3,9 @@
 
 ### Secrets in git, and a pipeline that stops them reaching production
 
-George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
+George Park  ·  Senior DevSecOps
 
-*Document 2 of 7 — How a change reaches production, end to end.*
+*How a change reaches production, end to end.*
 
 ---
 

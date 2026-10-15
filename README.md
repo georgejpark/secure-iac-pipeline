@@ -2,7 +2,7 @@
 
 ### Secrets in git, and a pipeline that stops them reaching production
 
-George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
+George Park  ·  Senior DevSecOps
 
 Demo repository: **secure-iac-pipeline**
 
@@ -127,7 +127,7 @@ each  -> api.github.com     HTTP 200
 ```
 
 Runners connect **outbound only** — no inbound port is open. Full build in
-[`docs/archive/RUNNER-INFRASTRUCTURE.md`](docs/archive/RUNNER-INFRASTRUCTURE.md).
+[`docs/RUNNER-INFRASTRUCTURE.md`](docs/RUNNER-INFRASTRUCTURE.md).
 
 
 ## What is actually running

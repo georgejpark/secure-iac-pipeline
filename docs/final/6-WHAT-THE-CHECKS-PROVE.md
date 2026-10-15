@@ -3,9 +3,9 @@
 
 ### Secrets in git, and a pipeline that stops them reaching production
 
-George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
+George Park  ·  Senior DevSecOps
 
-*Document 6 of 7 — What each check proves, and what it does not.*
+*What each check proves, and what it does not.*
 
 ---
 

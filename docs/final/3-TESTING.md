@@ -3,9 +3,9 @@
 
 ### Secrets in git, and a pipeline that stops them reaching production
 
-George Park  ·  Senior DevSecOps  ·  Texas Mutual  ·  10 September 2026
+George Park  ·  Senior DevSecOps
 
-*Document 3 of 7 — What is tested, and how to run it yourself.*
+*What is tested, and how to run it yourself.*
 
 ---
 

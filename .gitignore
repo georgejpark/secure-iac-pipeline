@@ -27,3 +27,11 @@ venv/
 secrets.yaml
 secrets.dec.yaml
 *.dec.yaml
+
+# Personal presentation notes and generated scan output: kept on disk, not published.
+HANDOFF.md
+docs/final/1-RUNBOOK.md
+docs/word/
+docs/archive/
+scripts/highlight_runbook.py
+.scan/
